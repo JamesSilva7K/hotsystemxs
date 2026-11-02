@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #262c3a #0f1217;
+  }
+
+  html {
+    background: #0b0d11;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(1000px 500px at 85% -10%, rgba(212, 249, 51, 0.06), transparent 60%),
+      radial-gradient(800px 400px at 10% 110%, rgba(59, 130, 246, 0.05), transparent 60%),
+      #0b0d11;
+    color: #e8ebf2;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: #d4f933;
+    color: #080a0e;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #d4f933;
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f1217;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #262c3a;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #394255;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl border border-[#222837] bg-[#12151d] shadow-[0_18px_60px_rgba(0,0,0,0.22)];
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-[#273044] bg-[#0c0f15] px-3.5 py-2.5 text-sm text-white placeholder:text-[#5d667a] focus:border-[#d4f933] focus:outline-none;
+  }
+
+  .label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a94a9];
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#d4f933] px-4 py-2.5 text-sm font-bold text-[#080a0e] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#2b3447] bg-[#171b25] px-4 py-2.5 text-sm font-semibold text-[#d6dbe7] transition hover:border-[#3b465d] hover:bg-[#1d2330] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#8f99ad] transition hover:bg-[#1a1f2b] hover:text-white;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.25s ease-out both;
+}
