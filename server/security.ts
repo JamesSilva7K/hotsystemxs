@@ -4,21 +4,30 @@ import path from 'node:path';
 import { DATA_DIR, PANEL_PASSWORD, SESSION_SECRET, VERCEL_KV_TOKEN } from './config.js';
 
 function ensureDataDir() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dir = process.env.VERCEL ? '/tmp' : DATA_DIR;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    // Silencia em ambientes serverless com disco read-only
+  }
 }
 
 function loadOrCreateKey(filename: string, bytes = 32): Buffer {
-  ensureDataDir();
-  const file = path.join(DATA_DIR, filename);
-  if (fs.existsSync(file)) {
-    const raw = fs.readFileSync(file, 'utf8').trim();
-    const value = Buffer.from(raw, 'hex');
-    if (value.length >= bytes) return value.subarray(0, bytes);
-    throw new Error(`Arquivo de chave inválido: ${filename}`);
+  const dir = process.env.VERCEL ? '/tmp' : DATA_DIR;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, filename);
+    if (fs.existsSync(file)) {
+      const raw = fs.readFileSync(file, 'utf8').trim();
+      const value = Buffer.from(raw, 'hex');
+      if (value.length >= bytes) return value.subarray(0, bytes);
+    }
+    const value = crypto.randomBytes(bytes);
+    fs.writeFileSync(file, value.toString('hex'), { encoding: 'utf8', mode: 0o600 });
+    return value;
+  } catch {
+    return crypto.randomBytes(bytes);
   }
-  const value = crypto.randomBytes(bytes);
-  fs.writeFileSync(file, value.toString('hex'), { encoding: 'utf8', mode: 0o600 });
-  return value;
 }
 
 function getEncryptionSecret(): string {
@@ -26,6 +35,7 @@ function getEncryptionSecret(): string {
   if (VERCEL_KV_TOKEN) return `vkv-${VERCEL_KV_TOKEN}`;
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) return `supa-${process.env.SUPABASE_SERVICE_ROLE_KEY}`;
   if (PANEL_PASSWORD) return `pwd-${PANEL_PASSWORD}`;
+  if (process.env.VERCEL) return 'vercel-default-fallback-secret-2026';
   return '';
 }
 
@@ -34,6 +44,7 @@ function getSessionSecret(): string {
   if (process.env.APP_SECRET) return `sess-${process.env.APP_SECRET}`;
   if (VERCEL_KV_TOKEN) return `sess-kv-${VERCEL_KV_TOKEN}`;
   if (PANEL_PASSWORD) return `sess-pwd-${PANEL_PASSWORD}`;
+  if (process.env.VERCEL) return 'vercel-default-fallback-session-2026';
   return '';
 }
 

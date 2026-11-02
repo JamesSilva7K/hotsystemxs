@@ -167,14 +167,45 @@ class SupabaseDriver implements DocumentDriver {
   }
 }
 
+class VercelFallbackDriver implements DocumentDriver {
+  kind = 'file' as const;
+  private file = path.join('/tmp', 'hot-state.json');
+  private memDoc: DocumentRecord | null = null;
+
+  async load(): Promise<DocumentRecord | null> {
+    try {
+      if (fs.existsSync(this.file)) {
+        const raw = fs.readFileSync(this.file, 'utf8');
+        return JSON.parse(raw) as DocumentRecord;
+      }
+    } catch {
+      // Ignora erro de leitura em fallback
+    }
+    return this.memDoc;
+  }
+
+  async save(doc: DocumentRecord): Promise<void> {
+    this.memDoc = doc;
+    try {
+      writeFileAtomic(this.file, JSON.stringify(doc, null, 2));
+    } catch {
+      // Em serverless /tmp pode ter limites transitórios
+    }
+  }
+
+  describe(): string {
+    return 'Armazenamento temporário (/tmp). Vincule o Upstash Storage na Vercel para persistência permanente.';
+  }
+}
+
 export function createDocumentDriver(): DocumentDriver {
   if (HAS_VERCEL_KV) return new VercelKvDriver();
   if (Boolean(SUPABASE_URL && SUPABASE_KEY)) return new SupabaseDriver();
-  // Em serverless sem storage o disco não persiste: falha com instruções diretas e simples.
   if (process.env.VERCEL) {
-    throw new Error(
-      'Para persistir dados na Vercel: adicione um banco no painel da Vercel (Vercel Dashboard > Storage > Create Database > KV). O Vercel KV conecta automaticamente ao projeto.'
+    console.warn(
+      '[store] ATENÇÃO: Nenhum banco remoto (Vercel KV / Upstash) detectado. Usando armazenamento temporário em /tmp.'
     );
+    return new VercelFallbackDriver();
   }
   fs.mkdirSync(DATA_DIR, { recursive: true });
   return new FileDriver();

@@ -798,7 +798,8 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof SyntaxError && 'body' in error) {
     return res.status(400).json({ error: 'Corpo JSON inválido.' });
   }
-  res.status(500).json({ error: 'Erro interno do servidor.' });
+  const message = error instanceof Error ? error.message : 'Erro interno do servidor.';
+  res.status(500).json({ error: message });
 });
 
 export { app };
