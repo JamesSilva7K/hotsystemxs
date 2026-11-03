@@ -1,10 +1,11 @@
-import React from 'react';
-import { ChevronDown, RefreshCw, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, BellOff, ChevronDown, RefreshCw, ShieldCheck, Volume2, VolumeX } from 'lucide-react';
 import type { Bot } from '@shared/types';
 import type { NavTab } from '../lib/nav';
 import { NAV_ITEMS } from '../lib/nav';
 import { Dot } from './StatusBadge';
 import { relativeTime } from '../lib/format';
+import { notifications } from '../lib/notifications';
 
 interface TopbarProps {
   tab: NavTab;
@@ -29,6 +30,16 @@ export function Topbar({
 }: TopbarProps) {
   const meta = NAV_ITEMS.find((item) => item.id === tab) || NAV_ITEMS[0];
   const selected = bots.find((bot) => bot.id === selectedBotId);
+  const [soundActive, setSoundActive] = useState(() => notifications.isSoundEnabled);
+
+  const toggleNotifications = async () => {
+    const next = !soundActive;
+    setSoundActive(next);
+    notifications.setSoundEnabled(next);
+    if (next) {
+      await notifications.requestPermission();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#1b202b] bg-[#0b0d11]/88 px-4 py-3.5 backdrop-blur-xl sm:px-6 lg:px-8">
@@ -47,6 +58,27 @@ export function Topbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* Botão de Notificações de Vendas e PIX (Som + Push) */}
+          <button
+            type="button"
+            onClick={toggleNotifications}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition sm:h-10 sm:w-10 ${
+              soundActive
+                ? 'border-[#d4f933]/40 bg-[#d4f933]/15 text-[#d4f933]'
+                : 'border-[#293246] bg-[#121722] text-[#6f7d94] hover:text-white'
+            }`}
+            title={
+              soundActive
+                ? 'Notificações de Vendas ativas (Som e Push). Clique para silenciar.'
+                : 'Notificações silenciadas. Clique para ativar som de vendas e alertas.'
+            }
+          >
+            {soundActive ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {soundActive && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#d4f933] shadow-[0_0_8px_#d4f933]" />
+            )}
+          </button>
+
           {bots.length > 0 && (
             <div className="relative block">
               <select

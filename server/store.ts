@@ -56,6 +56,8 @@ export interface StoredBot {
   lastError: string | null;
   offset: number;
   lastUpdateId: number;
+  language?: string;
+  niche?: string;
 }
 
 interface Database {
@@ -415,6 +417,8 @@ export class Store {
     commands: BotCommand[];
     webhookUrl: string | null;
     pendingUpdates: number;
+    language?: string;
+    niche?: string;
   }): StoredBot {
     return this.transaction((db) => {
       const now = new Date().toISOString();
@@ -439,6 +443,8 @@ export class Store {
         lastError: null,
         offset: existing?.offset || 0,
         lastUpdateId: existing?.lastUpdateId || 0,
+        language: input.language || existing?.language || 'pt',
+        niche: input.niche || existing?.niche || 'Modelo Hot',
       };
       if (existing) {
         Object.assign(existing, record);
@@ -839,6 +845,8 @@ export class Store {
       lastError: bot.lastError,
       leadsCount: this.db.leads.filter((lead) => lead.botId === bot.id).length,
       chatsCount: this.db.chats.filter((chat) => chat.botId === bot.id).length,
+      language: bot.language || 'pt',
+      niche: bot.niche || 'Modelo Hot',
     };
   }
 

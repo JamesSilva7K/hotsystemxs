@@ -106,34 +106,56 @@ export function Dashboard({ state, selectedBotId, onNavigate, onSync, syncing }:
 
   if (state.bots.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <div className="card relative overflow-hidden p-7 sm:p-10">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#d4f933]/6 blur-3xl" />
+      <div className="space-y-5 pb-20 md:pb-6">
+        {/* Banner Principal de Lançamento */}
+        <div className="card relative overflow-hidden p-6 sm:p-9">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#d4f933]/10 blur-3xl" />
           <div className="relative">
-            <span className="badge border-[#d4f933]/25 bg-[#d4f933]/10 text-[#d4f933]">
-              <Zap className="h-3 w-3" />
-              Primeiro acesso
-            </span>
-            <h2 className="mt-4 max-w-xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl">
-              Conecte seu bot e comece a captar leads reais.
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#929db0]">
-              O Hot System lê as conversas pela API oficial do Telegram, cria o CRM automaticamente e
-              mantém tudo sincronizado no servidor. Todos os números vêm do histórico real.
-            </p>
-            <button type="button" onClick={() => onNavigate('bots')} className="btn-primary mt-6">
-              <Plus className="h-4 w-4" />
-              Conectar primeiro bot
-            </button>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="badge border-[#d4f933]/30 bg-[#d4f933]/10 text-[#d4f933]">
+                <Zap className="h-3.5 w-3.5" />
+                Painel Operacional · Primeiro Acesso
+              </span>
+              <span className="text-xs text-[#7c889d]">
+                Banco de Dados: <span className="font-semibold text-white">{state.server.storage}</span>
+              </span>
+            </div>
 
-            <div className="mt-9 grid gap-3 sm:grid-cols-3">
+            <h2 className="mt-4 max-w-2xl text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl">
+              Conecte sua primeira Modelo Hot e comece a vender no Telegram.
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#929db0]">
+              O Hot System gerencia seus bots na API oficial do Telegram, cria o CRM automaticamente,
+              dispara mensagens com fotos, vídeos, GIFs e processa cobranças PIX automatizadas via SyncPay.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => onNavigate('bots')}
+                className="btn-primary shadow-lg shadow-[#d4f933]/20"
+              >
+                <Plus className="h-4 w-4" />
+                Conectar Primeira Modelo
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('vendas')}
+                className="btn-secondary"
+              >
+                Configurar Vendas & PIX
+              </button>
+            </div>
+
+            {/* Grid dos 3 Passos */}
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
-                ['1', 'Valide o token', 'O servidor chama getMe e confirma o bot no Telegram.'],
-                ['2', 'Capture conversas', 'Mensagens recebidas criam leads e histórico reais.'],
-                ['3', 'Ative e escale', 'Envie mensagens e campanhas com resultado por destinatário.'],
+                ['1', 'Adicione a Modelo', 'Cole o token do @BotFather e selecione o idioma de atendimento.'],
+                ['2', 'Capte e Conquiste', 'Cada mensagem recebida vira lead com @username real e histórico.'],
+                ['3', 'Venda no Automático', 'Gere PIX Copia e Cola instantâneo com entrega automática de acesso.'],
               ].map(([step, title, text]) => (
-                <div key={step} className="rounded-2xl border border-[#242c3b] bg-[#0d1017] p-4">
-                  <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-[#d4f933] text-xs font-extrabold text-black">
+                <div key={step} className="rounded-2xl border border-[#242c3b] bg-[#0d1017] p-4 transition hover:border-[#344057]">
+                  <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-[#d4f933] text-xs font-extrabold text-black shadow-md shadow-[#d4f933]/15">
                     {step}
                   </div>
                   <div className="text-sm font-bold text-white">{title}</div>
@@ -144,23 +166,30 @@ export function Dashboard({ state, selectedBotId, onNavigate, onSync, syncing }:
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {/* Cards Auxiliares de Produtividade */}
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="card p-5">
             <div className="flex items-center gap-2 text-sm font-bold text-white">
-              <BotIcon className="h-4 w-4 text-[#d4f933]" /> Token do @BotFather
+              <BotIcon className="h-4 w-4 text-[#d4f933]" /> Modelos Hot & VIP
             </div>
             <p className="mt-2 text-xs leading-relaxed text-[#8591a5]">
-              Envie <span className="mono text-[#c6cfdd]">/newbot</span> para o @BotFather, copie o token e
-              cole em Bots. O token fica criptografado no servidor e nunca retorna ao navegador.
+              Cadastre múltiplas modelos em um só painel. Cada modelo tem seu idioma, catálogo e mensagens de boas-vindas próprias.
             </p>
           </div>
           <div className="card p-5">
             <div className="flex items-center gap-2 text-sm font-bold text-white">
-              <CalendarClock className="h-4 w-4 text-[#d4f933]" /> Sincronização automática
+              <Zap className="h-4 w-4 text-[#d4f933]" /> Vendas PIX em Segundos
             </div>
             <p className="mt-2 text-xs leading-relaxed text-[#8591a5]">
-              Sem domínio público, o sistema usa long polling seguro. Com HTTPS, você pode ativar webhook
-              em um clique e receber atualizações em tempo real.
+              Gere cobranças com QR Code e Copia e Cola. O webhook da SyncPay aprova e envia o link do canal VIP imediatamente.
+            </p>
+          </div>
+          <div className="card p-5">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <CalendarClock className="h-4 w-4 text-[#d4f933]" /> Blindagem e Segurança
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-[#8591a5]">
+              Tokens criptografados em repouso com AES-256-GCM. Proteção contra ataques de injeção e persistência remota no Upstash.
             </p>
           </div>
         </div>

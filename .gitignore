@@ -10,3 +10,5 @@ coverage/
 !.env.example
 .DS_Store
 shot-*.png
+
+.vercel

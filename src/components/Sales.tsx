@@ -18,6 +18,7 @@ import type { AppState, Product, Purchase, PurchaseStatus } from '@shared/types'
 import { api } from '../lib/api';
 import { formatBRL, formatDate, formatFullDate, formatNumber } from '../lib/format';
 import { Modal } from './Modal';
+import { TelegramPreview } from './TelegramPreview';
 import { useToast } from './Toast';
 
 interface SalesProps {
@@ -274,6 +275,27 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
       await refresh();
     } catch (error) {
       notify('error', 'Cobrança não criada', error instanceof Error ? error.message : 'Tente novamente.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sendPixToLeadTelegram = async () => {
+    if (!chargeResult || !chargeForm.leadId) return;
+    const lead = state.leads.find((l) => l.id === chargeForm.leadId);
+    if (!lead) return;
+    const pixText = `✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`${chargeResult.pixCode}\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`;
+    setBusy('send-pix');
+    try {
+      await api.sendMessage({
+        botId: chargeForm.botId,
+        chatId: lead.telegramUserId,
+        text: pixText,
+        leadId: lead.id,
+      });
+      notify('success', 'PIX Enviado no Telegram!', `Mensagem entregue para @${lead.username || lead.name}.`);
+    } catch (err) {
+      notify('error', 'Falha ao enviar no Telegram', err instanceof Error ? err.message : 'Tente novamente.');
     } finally {
       setBusy(null);
     }
@@ -744,24 +766,50 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
         }
       >
         {chargeResult ? (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-[#d4f933]/25 bg-[#d4f933]/5 p-3">
-              <div className="text-[10px] uppercase tracking-wide text-[#d4f933]">Valor</div>
-              <div className="text-xl font-bold text-white">{chargeResult.amount}</div>
-            </div>
-            <div>
-              <div className="label">Código copia e cola</div>
-              <textarea readOnly value={chargeResult.pixCode} className="input min-h-28 resize-y font-mono text-[10px]" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-2xl border border-[#d4f933]/30 bg-[#d4f933]/10 p-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#d4f933]">PIX Gerado com Sucesso</span>
+                <div className="text-2xl font-black text-white">{chargeResult.amount}</div>
+              </div>
               <button
                 type="button"
-                onClick={() => void copy(chargeResult.pixCode, 'Código PIX')}
-                className="btn-primary mt-2 w-full text-xs"
+                onClick={() => void copy(chargeResult.pixCode, 'Código PIX Copia e Cola')}
+                className="btn-primary shrink-0 text-xs shadow-md shadow-[#d4f933]/15"
               >
-                <Copy className="h-3.5 w-3.5" /> Copiar código
+                <Copy className="h-3.5 w-3.5" /> Copiar Código
               </button>
             </div>
+
+            {/* Enviar no Telegram do Lead com 1 clique */}
+            {chargeForm.leadId && (
+              <button
+                type="button"
+                onClick={sendPixToLeadTelegram}
+                disabled={busy === 'send-pix'}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 py-2.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/25"
+              >
+                {busy === 'send-pix' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Enviar Cobrança no Telegram do Lead Agora
+              </button>
+            )}
+
+            {/* Mockup Real do Telegram da Cobrança */}
+            <div>
+              <div className="mb-2 text-xs font-bold text-white">Como o Cliente Recebe no Telegram:</div>
+              <TelegramPreview
+                botName={state.bots.find((b) => b.id === chargeForm.botId)?.username ? `@${state.bots.find((b) => b.id === chargeForm.botId)?.username}` : 'Modelo Hot 💋'}
+                botAvatar={state.bots.find((b) => b.id === chargeForm.botId)?.avatarUrl}
+                text={`✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`${chargeResult.pixCode}\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`}
+                buttons={[
+                  { text: '📋 Copiar Código PIX', url: 'https://t.me', color: 'purple', row: 0 },
+                ]}
+                socialProof='💬 Diego disse: "pqp que gostosa do caralho naquele vídeo com o amigo do ex marido 😈"'
+              />
+            </div>
+
             {chargeResult.warning && (
-              <p className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-[11px] text-amber-200">
+              <p className="rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
                 {chargeResult.warning}
               </p>
             )}

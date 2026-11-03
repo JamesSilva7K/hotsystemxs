@@ -16,6 +16,7 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Login } from './components/Login';
 import { useToast } from './components/Toast';
+import { notifications } from './lib/notifications';
 
 export default function App() {
   const { notify } = useToast();
@@ -33,6 +34,7 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [composerLead, setComposerLead] = useState<Lead | null>(null);
   const loadSeq = useRef(0);
+  const prevStateRef = useRef<AppState | null>(null);
 
   const setTab = useCallback((next: NavTab) => {
     setTabState(next);
@@ -53,6 +55,32 @@ export default function App() {
     try {
       const data = await api.state();
       if (sequence !== loadSeq.current) return;
+
+      // Dispara som e notificação push ao detectar nova venda ou PIX aprovado
+      if (prevStateRef.current) {
+        const prevPaid = prevStateRef.current.purchases.filter((p) => p.status === 'pago').length;
+        const currPaid = data.purchases.filter((p) => p.status === 'pago').length;
+        if (currPaid > prevPaid) {
+          const latest = data.purchases.find((p) => p.status === 'pago');
+          const val = latest
+            ? (latest.amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : '';
+          notifications.notify(
+            `💰 VENDA APROVADA - ${val}`,
+            `Cliente: ${latest?.customerName || 'Telegram'}\nHorário: ${new Date().toLocaleTimeString('pt-BR')}`
+          );
+          notify('success', `💰 Nova Venda Aprovada! (${val})`, `Acesso entregue automaticamente no Telegram.`);
+        } else if (data.purchases.length > prevStateRef.current.purchases.length) {
+          const newest = data.purchases[0];
+          const val = newest
+            ? (newest.amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : '';
+          notifications.playLeadChime();
+          notify('info', `⚡ Novo PIX Gerado (${val})`, `Aguardando pagamento do cliente.`);
+        }
+      }
+      prevStateRef.current = data;
+
       setState(data);
       setLoadError('');
       setAuthenticated(true);

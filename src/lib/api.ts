@@ -77,8 +77,8 @@ export const api = {
   login: (password: string) => post<{ ok: boolean }>('/api/auth/login', { password }),
   logout: () => post<{ ok: boolean }>('/api/auth/logout'),
   state: () => request<AppState>('/api/state'),
-  connectBot: (token: string) =>
-    post<{ ok: boolean; bot: AppState['bots'][number] }>('/api/bots', { token }),
+  connectBot: (token: string, options?: { language?: string; niche?: string }) =>
+    post<{ ok: boolean; bot: AppState['bots'][number] }>('/api/bots', { token, ...options }),
   refreshBot: (id: string) => post<{ ok: boolean; latencyMs: number }>(`/api/bots/${id}/refresh`),
   deleteBot: (id: string) => request<{ ok: boolean }>(`/api/bots/${id}`, { method: 'DELETE' }),
   syncBot: (id: string) =>
@@ -110,7 +110,7 @@ export const api = {
   stopLeadFollowUp: (id: string) =>
     patch<{ ok: boolean; lead: Lead }>(`/api/leads/${id}/followup`, { action: 'stop' }),
   sendMessage: (input: SendMessageInput) =>
-    post<{ ok: boolean; messageId: string }>('/api/messages/send', input),
+    post<{ ok: boolean; messageId?: string; error?: string }>('/api/messages/send', input),
   broadcast: (input: BroadcastInput) =>
     post<{ ok: boolean; total: number; sent: number; failed: number; errors: string[] }>(
       '/api/messages/broadcast',

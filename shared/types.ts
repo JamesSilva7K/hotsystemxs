@@ -29,6 +29,8 @@ export interface Bot {
   lastError: string | null;
   leadsCount: number;
   chatsCount: number;
+  language?: string;
+  niche?: string;
 }
 
 export interface Chat {
@@ -347,6 +349,7 @@ export interface SendMessageInput {
   chatId: string;
   text: string;
   imageUrl?: string;
+  leadId?: string;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }
 

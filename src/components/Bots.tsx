@@ -42,6 +42,8 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const { notify } = useToast();
   const [token, setToken] = useState('');
   const [showToken, setShowToken] = useState(false);
+  const [language, setLanguage] = useState<'pt' | 'en' | 'es'>('pt');
+  const [niche, setNiche] = useState('Modelo Hot');
   const [connecting, setConnecting] = useState(false);
   const [openBotId, setOpenBotId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -60,8 +62,8 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
     if (!token.trim()) return;
     setConnecting(true);
     try {
-      const result = await api.connectBot(token.trim());
-      notify('success', 'Bot conectado', `@${result.bot.username} validado pela API oficial do Telegram.`);
+      const result = await api.connectBot(token.trim(), { language, niche });
+      notify('success', 'Bot conectado', `@${result.bot.username} validado com sucesso pela API oficial do Telegram.`);
       setToken('');
       await refresh();
     } catch (error) {
@@ -173,35 +175,67 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               O servidor valida o token com <span className="mono text-[#c6cfdc]">getMe</span>, importa a foto,
               comandos e webhook, e guarda o token criptografado. Ele nunca volta para o navegador.
             </p>
-            <form onSubmit={connect} className="mt-5 flex flex-col gap-2 sm:flex-row">
-              <div className="relative min-w-0 flex-1">
-                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#68758b]" />
-                <input
-                  type={showToken ? 'text' : 'password'}
-                  value={token}
-                  onChange={(event) => setToken(event.target.value)}
-                  placeholder="123456789:AA..."
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="input mono pl-9 pr-10 text-xs"
-                  aria-label="Token do bot"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken((value) => !value)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#6f7c91] hover:text-white"
-                  aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
-                >
-                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <form onSubmit={connect} className="mt-5 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative min-w-0 flex-1">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#68758b]" />
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={token}
+                    onChange={(event) => setToken(event.target.value)}
+                    placeholder="Token do @BotFather (ex: 123456789:AA...)"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="input mono pl-9 pr-10 text-xs"
+                    aria-label="Token do bot"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken((value) => !value)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#6f7c91] hover:text-white"
+                    aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
+                  >
+                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                <button type="submit" disabled={connecting || !token.trim()} className="btn-primary shrink-0">
+                  {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {connecting ? 'Validando' : 'Conectar Modelo'}
                 </button>
               </div>
-              <button type="submit" disabled={connecting || !token.trim()} className="btn-primary shrink-0">
-                {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {connecting ? 'Validando' : 'Conectar'}
-              </button>
+
+              {/* Seleção de Idioma e Nicho da Modelo */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#79869c]">Idioma do Atendimento</label>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as typeof language)}
+                    className="input mt-1 text-xs font-semibold"
+                  >
+                    <option value="pt">🇧🇷 Português (Brasil)</option>
+                    <option value="en">🇺🇸 English (Global)</option>
+                    <option value="es">🇪🇸 Español (Hispano)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#79869c]">Categoria / Nicho</label>
+                  <select
+                    value={niche}
+                    onChange={(e) => setNiche(e.target.value)}
+                    className="input mt-1 text-xs font-semibold"
+                  >
+                    <option value="Modelo Hot">Modelo Hot 💋</option>
+                    <option value="OnlyFans VIP">OnlyFans VIP ⭐</option>
+                    <option value="Privacy Exclusivo">Privacy Exclusivo 🔒</option>
+                    <option value="Vendas & Assinatura">Vendas & Assinatura ⚡</option>
+                  </select>
+                </div>
+              </div>
             </form>
             <p className="mt-2 text-[11px] text-[#616e83]">
-              Gere o token enviando <span className="mono text-[#909cb0]">/newbot</span> para o @BotFather.
+              Gere o token enviando <span className="mono text-[#909cb0]">/newbot</span> para o @BotFather no Telegram.
             </p>
           </div>
           <div className="border-t border-[#222a39] bg-[#0e1118] p-5 lg:border-l lg:border-t-0 sm:p-7">

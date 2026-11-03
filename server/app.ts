@@ -238,6 +238,8 @@ const tokenSchema = z.object({
     .trim()
     .min(20, 'Informe o token completo do @BotFather.')
     .max(200, 'Token muito longo.'),
+  language: z.string().trim().max(10).optional(),
+  niche: z.string().trim().max(50).optional(),
 });
 
 app.post(
@@ -279,6 +281,8 @@ app.post(
         commands,
         webhookUrl: webhook?.url || null,
         pendingUpdates: webhook?.pending_update_count || 0,
+        language: parsed.data.language,
+        niche: parsed.data.niche,
       });
       const publicBot = store.getPublicState().bots.find((item) => item.id === bot.id);
       return res.status(201).json({ ok: true, bot: publicBot });
