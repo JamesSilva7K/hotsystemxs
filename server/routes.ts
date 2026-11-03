@@ -158,16 +158,28 @@ export function registerAdminRoutes(app: Express): void {
   // Templates
   const buttonSchema = z.object({
     text: z.string().trim().min(1).max(64),
-    url: z.string().trim().url().optional(),
+    url: z.string().trim().optional(),
     callbackData: z.string().trim().max(64).optional(),
+    color: z.enum(['default', 'green', 'red', 'purple', 'amber']).optional(),
+    row: z.number().int().min(0).max(10).optional(),
+  });
+
+  const mediaGridItemSchema = z.object({
+    id: z.string(),
+    url: z.string().trim(),
+    type: z.enum(['photo', 'video']),
+    position: z.enum(['main-left', 'top-right', 'bottom-right', 'auto']).optional(),
   });
 
   const templateSchema = z.object({
     name: z.string().trim().min(1, 'Informe um nome.').max(80),
     category: z.enum(templateCategories),
     body: z.string().trim().min(1, 'Escreva a mensagem.').max(4_096),
-    buttons: z.array(buttonSchema).max(6).optional(),
-    mediaUrl: z.string().trim().url().nullable().optional(),
+    buttons: z.array(buttonSchema).max(10).optional(),
+    mediaUrl: z.string().trim().nullable().optional(),
+    mediaType: z.enum(['photo', 'video', 'animation', 'none']).optional(),
+    mediaMode: z.enum(['single', 'grid', 'none']).optional(),
+    mediaGrid: z.array(mediaGridItemSchema).max(10).optional(),
     weight: z.number().int().min(1).max(50).optional(),
     active: z.boolean().optional(),
     tags: z.array(z.string().trim().max(30)).max(10).optional(),
@@ -184,6 +196,9 @@ export function registerAdminRoutes(app: Express): void {
       body: parsed.data.body,
       buttons: parsed.data.buttons || [],
       mediaUrl: parsed.data.mediaUrl || null,
+      mediaType: parsed.data.mediaType || 'none',
+      mediaMode: parsed.data.mediaMode || 'single',
+      mediaGrid: parsed.data.mediaGrid || [],
       active: parsed.data.active !== false,
       weight: parsed.data.weight || 1,
       variantOf: null,

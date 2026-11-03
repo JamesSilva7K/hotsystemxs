@@ -1,9 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Eye,
+  Grid,
+  Image,
+  Layers,
   Loader2,
+  Palette,
   Pause,
   Play,
   Plus,
@@ -11,6 +18,7 @@ import {
   Sparkles,
   Trash2,
   Users,
+  Video,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -19,6 +27,7 @@ import { api } from '../lib/api';
 import { formatFullDate, formatNumber, localDateTimeValue, relativeTime, toIsoFromLocal } from '../lib/format';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
+import { TelegramPreview } from './TelegramPreview';
 
 interface AutomationProps {
   state: AppState;
@@ -44,6 +53,22 @@ interface SequenceStepDraft {
   delayMinutes: number;
 }
 
+interface TemplateGridItem {
+  id: string;
+  url: string;
+  type: 'photo' | 'video';
+  position: 'main-left' | 'top-right' | 'bottom-right' | 'auto';
+}
+
+interface TemplateButtonItem {
+  id: number;
+  text: string;
+  url: string;
+  callbackData: string;
+  color: 'default' | 'green' | 'red' | 'purple' | 'amber';
+  row: number;
+}
+
 export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
   const { notify } = useToast();
   const [tab, setTab] = useState<'templates' | 'sequences'>('templates');
@@ -56,7 +81,127 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
     category: 'reengajamento' as TemplateCategory,
     body: '',
     weight: 1,
+    mediaMode: 'none' as 'single' | 'grid' | 'none',
+    mediaUrl: '',
+    mediaType: 'none' as 'photo' | 'video' | 'animation' | 'none',
+    mediaGrid: [] as TemplateGridItem[],
+    buttons: [] as TemplateButtonItem[],
   });
+
+  const currentBot = useMemo(() => {
+    if (selectedBotId !== 'all') {
+      return state.bots.find((b) => b.id === selectedBotId) || state.bots[0] || null;
+    }
+    return state.bots[0] || null;
+  }, [state.bots, selectedBotId]);
+
+  const addGridItem = (type: 'photo' | 'video' = 'photo') => {
+    if (templateForm.mediaGrid.length >= 10) return;
+    const defaultPos =
+      templateForm.mediaGrid.length === 0
+        ? 'main-left'
+        : templateForm.mediaGrid.length === 1
+        ? 'top-right'
+        : 'bottom-right';
+
+    const newItem: TemplateGridItem = {
+      id: `grid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      url:
+        type === 'photo'
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'
+          : 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+      type,
+      position: defaultPos,
+    };
+    setTemplateForm((prev) => ({
+      ...prev,
+      mediaMode: 'grid',
+      mediaGrid: [...prev.mediaGrid, newItem],
+    }));
+  };
+
+  const updateGridItem = (id: string, patch: Partial<TemplateGridItem>) => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      mediaGrid: prev.mediaGrid.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const removeGridItem = (id: string) => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      mediaGrid: prev.mediaGrid.filter((item) => item.id !== id),
+    }));
+  };
+
+  const moveGridItem = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= templateForm.mediaGrid.length) return;
+    const copy = [...templateForm.mediaGrid];
+    const [moved] = copy.splice(index, 1);
+    copy.splice(targetIdx, 0, moved);
+    setTemplateForm((prev) => ({ ...prev, mediaGrid: copy }));
+  };
+
+  const fillExampleHotGrid = () => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      mediaMode: 'grid',
+      mediaGrid: [
+        {
+          id: 'g-1',
+          url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'main-left',
+        },
+        {
+          id: 'g-2',
+          url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'top-right',
+        },
+        {
+          id: 'g-3',
+          url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'bottom-right',
+        },
+      ],
+    }));
+  };
+
+  const addButton = () => {
+    if (templateForm.buttons.length >= 8) return;
+    const newIdNum = (templateForm.buttons.reduce((max, b) => Math.max(max, b.id), 0) || 0) + 1;
+    setTemplateForm((prev) => ({
+      ...prev,
+      buttons: [
+        ...prev.buttons,
+        {
+          id: newIdNum,
+          text: '🔥 NOVO BOTÃO',
+          url: '',
+          callbackData: 'menu',
+          color: 'green',
+          row: prev.buttons.length,
+        },
+      ],
+    }));
+  };
+
+  const updateButton = (id: number, patch: Partial<TemplateButtonItem>) => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      buttons: prev.buttons.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+    }));
+  };
+
+  const removeButton = (id: number) => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      buttons: prev.buttons.filter((b) => b.id !== id),
+    }));
+  };
 
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateForm, setGenerateForm] = useState({
@@ -80,6 +225,7 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
   });
 
   const [preview, setPreview] = useState<{ title: string; text: string } | null>(null);
+  const [previewTemplateObj, setPreviewTemplateObj] = useState<MessageTemplate | null>(null);
 
   const templates = useMemo(
     () =>
@@ -102,7 +248,20 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
 
   const openNewTemplate = () => {
     setEditingTemplate(null);
-    setTemplateForm({ name: '', category: 'reengajamento', body: '', weight: 1 });
+    setTemplateForm({
+      name: '',
+      category: 'reengajamento',
+      body: 'Oi vida... vi que você parou de me responder. Aconteceu alguma coisa? 🥺\n\nEu tava aqui separando um conteúdo novo e lembrei de você. Se você quiser ver, me avisa que eu libero uma provinha agora:',
+      weight: 1,
+      mediaMode: 'none',
+      mediaUrl: '',
+      mediaType: 'none',
+      mediaGrid: [],
+      buttons: [
+        { id: 1, text: '🔞 VER PRÉVIA NA DM', url: '', callbackData: 'teaser_amostra', color: 'green', row: 0 },
+        { id: 2, text: '💎 VER PLANOS VIP', url: '', callbackData: 'menu', color: 'purple', row: 1 },
+      ],
+    });
     setTemplateOpen(true);
   };
 
@@ -113,6 +272,36 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
       category: template.category,
       body: template.body,
       weight: template.weight,
+      mediaMode:
+        template.mediaMode ||
+        (template.mediaGrid && template.mediaGrid.length > 0
+          ? 'grid'
+          : template.mediaUrl
+          ? 'single'
+          : 'none'),
+      mediaUrl: template.mediaUrl || '',
+      mediaType: template.mediaType || (template.mediaUrl ? 'photo' : 'none'),
+      mediaGrid:
+        template.mediaGrid?.map((item) => ({
+          id: item.id || `g-${Math.random()}`,
+          url: item.url,
+          type: item.type,
+          position: item.position || 'auto',
+        })) || [],
+      buttons:
+        template.buttons && template.buttons.length > 0
+          ? template.buttons.map((b, i) => ({
+              id: i + 1,
+              text: b.text,
+              url: b.url || '',
+              callbackData: b.callbackData || '',
+              color: b.color || 'default',
+              row: b.row ?? i,
+            }))
+          : [
+              { id: 1, text: '🔞 VER PRÉVIA NA DM', url: '', callbackData: 'teaser_amostra', color: 'green', row: 0 },
+              { id: 2, text: '💎 VER PLANOS VIP', url: '', callbackData: 'menu', color: 'purple', row: 1 },
+            ],
     });
     setTemplateOpen(true);
   };
@@ -121,12 +310,30 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
     event.preventDefault();
     setBusy('template');
     try {
+      const payload = {
+        name: templateForm.name.trim(),
+        category: templateForm.category,
+        body: templateForm.body.trim(),
+        weight: templateForm.weight,
+        mediaMode: templateForm.mediaMode,
+        mediaUrl: templateForm.mediaMode === 'single' && templateForm.mediaUrl.trim() ? templateForm.mediaUrl.trim() : null,
+        mediaType: templateForm.mediaMode === 'single' ? templateForm.mediaType : 'none',
+        mediaGrid: templateForm.mediaMode === 'grid' ? templateForm.mediaGrid : [],
+        buttons: templateForm.buttons.map((b) => ({
+          text: b.text.trim(),
+          url: b.url.trim() ? b.url.trim() : undefined,
+          callbackData: b.callbackData.trim() ? b.callbackData.trim() : undefined,
+          color: b.color,
+          row: b.row,
+        })),
+      };
+
       if (editingTemplate) {
-        await api.updateTemplate(editingTemplate.id, templateForm);
-        notify('success', 'Template atualizado', templateForm.name);
+        await api.updateTemplate(editingTemplate.id, payload);
+        notify('success', 'Template atualizado com sucesso!', templateForm.name);
       } else {
-        await api.createTemplate(templateForm);
-        notify('success', 'Template criado', 'Já pode ser usado nos passos de follow-up.');
+        await api.createTemplate(payload);
+        notify('success', 'Template criado com sucesso!', 'Já pode ser usado nos passos de follow-up e campanhas.');
       }
       setTemplateOpen(false);
       await refresh();
@@ -197,6 +404,7 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
         botId: selectedBotId !== 'all' ? selectedBotId : state.bots[0]?.id || null,
       });
       setPreview({ title: template.name, text: result.text });
+      setPreviewTemplateObj(template);
     } catch (error) {
       notify('error', 'Falha no preview', error instanceof Error ? error.message : 'Tente novamente.');
     } finally {
@@ -403,6 +611,21 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
                     >
                       {template.active ? 'Ativo' : 'Pausado'}
                     </span>
+                    {template.mediaMode === 'grid' && template.mediaGrid && template.mediaGrid.length > 0 && (
+                      <span className="badge border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold">
+                        📸 Grid ({template.mediaGrid.length})
+                      </span>
+                    )}
+                    {template.mediaMode === 'single' && template.mediaUrl && (
+                      <span className="badge border-sky-500/30 bg-sky-500/10 text-sky-300">
+                        {template.mediaType === 'video' ? '🎬 Vídeo' : template.mediaType === 'animation' ? '✨ GIF' : '🖼️ Foto'}
+                      </span>
+                    )}
+                    {template.buttons.length > 0 && (
+                      <span className="badge border-purple-500/30 bg-purple-500/10 text-purple-300">
+                        🎨 {template.buttons.length} botões
+                      </span>
+                    )}
                     <span className="text-[10px] text-[#657287]">{template.usageCount} envios</span>
                   </div>
                 </div>
@@ -444,12 +667,27 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
                 {template.body}
               </p>
               {template.buttons.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {template.buttons.map((button, index) => (
-                    <span key={`${template.id}-btn-${index}`} className="badge border-[#2b3447] bg-[#131923] text-[#aab4c4]">
-                      {button.text}
-                    </span>
-                  ))}
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {template.buttons.map((button, index) => {
+                    const colorClass =
+                      button.color === 'green'
+                        ? 'bg-[#3b7c3d] text-white'
+                        : button.color === 'purple'
+                        ? 'bg-[#5b3c88] text-white'
+                        : button.color === 'amber'
+                        ? 'bg-[#c58b1d] text-black font-bold'
+                        : button.color === 'red'
+                        ? 'bg-[#a33232] text-white'
+                        : 'bg-[#131923] text-[#aab4c4] border border-[#2b3447]';
+                    return (
+                      <span
+                        key={`${template.id}-btn-${index}`}
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-medium shadow-sm ${colorClass}`}
+                      >
+                        {button.text}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </article>
@@ -550,61 +788,435 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
       <Modal
         open={templateOpen}
         onClose={() => setTemplateOpen(false)}
-        title={editingTemplate ? 'Editar modelo' : 'Novo modelo'}
-        description="Use {nome}, {preco}, {pix}, {link} e spintax {oi|olá} para variar automaticamente."
+        title={editingTemplate ? 'Editar Modelo de Mensagem Avançado' : 'Novo Modelo de Mensagem Avançado'}
+        description="Monte textos persuasivos, anexe mídias em grid interativo e crie botões de ação com cores personalizadas e preview 100% real do Telegram."
+        size="xl"
         footer={
           <>
-            <button type="button" onClick={() => setTemplateOpen(false)} className="btn-secondary text-xs">Cancelar</button>
+            <button type="button" onClick={() => setTemplateOpen(false)} className="btn-secondary text-xs">
+              Cancelar
+            </button>
             <button type="submit" form="template-form" disabled={busy === 'template'} className="btn-primary text-xs">
               {busy === 'template' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-              Salvar modelo
+              Salvar Modelo
             </button>
           </>
         }
       >
-        <form id="template-form" onSubmit={saveTemplate} className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label" htmlFor="tpl-name">Nome</label>
-              <input
-                id="tpl-name"
-                className="input"
-                value={templateForm.name}
-                onChange={(event) => setTemplateForm({ ...templateForm, name: event.target.value })}
-                placeholder="Ex.: Sumiu no meio"
-                maxLength={80}
-                required
-              />
+        <form id="template-form" onSubmit={saveTemplate} className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            {/* Coluna Esquerda: Edição e Configurações */}
+            <div className="space-y-4 xl:col-span-7">
+              {/* Nome e Categoria */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="tpl-name">
+                    Nome do Modelo
+                  </label>
+                  <input
+                    id="tpl-name"
+                    className="input text-xs"
+                    value={templateForm.name}
+                    onChange={(event) => setTemplateForm({ ...templateForm, name: event.target.value })}
+                    placeholder="Ex.: Teaser de Recuperação 35% OFF"
+                    maxLength={80}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="tpl-cat">
+                    Categoria do Funil
+                  </label>
+                  <select
+                    id="tpl-cat"
+                    className="input text-xs"
+                    value={templateForm.category}
+                    onChange={(event) =>
+                      setTemplateForm({ ...templateForm, category: event.target.value as TemplateCategory })
+                    }
+                  >
+                    {CATEGORIES.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Texto da Mensagem */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0" htmlFor="tpl-body">
+                    Texto da Mensagem
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span className="text-[#657287]">Atalhos rápidos:</span>
+                    {['{nome}', '{preco}', '{pix}', '{link}'].map((shortcut) => (
+                      <button
+                        key={shortcut}
+                        type="button"
+                        onClick={() =>
+                          setTemplateForm((prev) => ({ ...prev, body: prev.body + ' ' + shortcut }))
+                        }
+                        className="rounded border border-[#2b3547] bg-[#121824] px-1.5 py-0.5 text-[#d4f933] hover:border-[#d4f933]/50"
+                      >
+                        {shortcut}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  id="tpl-body"
+                  className="input min-h-36 resize-y leading-relaxed text-xs font-sans"
+                  value={templateForm.body}
+                  onChange={(event) => setTemplateForm({ ...templateForm, body: event.target.value })}
+                  maxLength={4096}
+                  placeholder="Escreva a mensagem envolvente aqui..."
+                  required
+                />
+                <div className="mt-1 flex justify-between text-[10px] text-[#657287]">
+                  <span>**negrito**, *itálico* e `código` funcionam nativamente no Telegram.</span>
+                  <span>{templateForm.body.length}/4096</span>
+                </div>
+              </div>
+
+              {/* Mídias & Grid Interativo 🖼️ */}
+              <div className="rounded-2xl border border-[#242e3f] bg-[#0c1017] p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1c2433] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Image className="h-4 w-4 text-[#d4f933]" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Mídia & Grid de Imagens/Vídeos/GIFs
+                    </span>
+                  </div>
+                  {/* Seletor de Modo de Mídia */}
+                  <div className="flex rounded-lg border border-[#263246] bg-[#121722] p-0.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateForm((prev) => ({ ...prev, mediaMode: 'none' }))}
+                      className={`rounded px-2.5 py-1 font-semibold transition ${
+                        templateForm.mediaMode === 'none' ? 'bg-[#d4f933] text-black' : 'text-[#8292a8]'
+                      }`}
+                    >
+                      Sem Mídia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTemplateForm((prev) => ({
+                          ...prev,
+                          mediaMode: 'single',
+                          mediaType: prev.mediaType === 'none' ? 'photo' : prev.mediaType,
+                        }))
+                      }
+                      className={`rounded px-2.5 py-1 font-semibold transition ${
+                        templateForm.mediaMode === 'single' ? 'bg-[#d4f933] text-black' : 'text-[#8292a8]'
+                      }`}
+                    >
+                      Mídia Única
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (templateForm.mediaGrid.length === 0) fillExampleHotGrid();
+                        else setTemplateForm((prev) => ({ ...prev, mediaMode: 'grid' }));
+                      }}
+                      className={`rounded px-2.5 py-1 font-semibold transition ${
+                        templateForm.mediaMode === 'grid' ? 'bg-[#d4f933] text-black' : 'text-[#8292a8]'
+                      }`}
+                    >
+                      Grid Interativo 📸
+                    </button>
+                  </div>
+                </div>
+
+                {/* Opções de Mídia Única */}
+                {templateForm.mediaMode === 'single' && (
+                  <div className="space-y-2.5 pt-1">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] uppercase font-bold text-[#7e8ea4]">URL da Mídia (HTTPS)</label>
+                        <input
+                          value={templateForm.mediaUrl}
+                          onChange={(e) => setTemplateForm({ ...templateForm, mediaUrl: e.target.value })}
+                          placeholder="https://exemplo.com/foto.jpg ou .mp4 ou .gif"
+                          className="input text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#7e8ea4]">Tipo da Mídia</label>
+                        <select
+                          value={templateForm.mediaType}
+                          onChange={(e) =>
+                            setTemplateForm({
+                              ...templateForm,
+                              mediaType: e.target.value as 'photo' | 'video' | 'animation',
+                            })
+                          }
+                          className="input text-xs mt-1"
+                        >
+                          <option value="photo">Foto (JPEG/PNG)</option>
+                          <option value="video">Vídeo (MP4)</option>
+                          <option value="animation">GIF / Animação</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Opções de Grid Interativo */}
+                {templateForm.mediaMode === 'grid' && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] text-[#93a2b7]">
+                        Monte o layout do álbum do Telegram ({templateForm.mediaGrid.length} mídias):
+                      </span>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => addGridItem('photo')}
+                          className="rounded-lg border border-[#2b3648] bg-[#141b27] px-2.5 py-1 text-[11px] font-bold text-[#d4f933] hover:bg-[#1a2333]"
+                        >
+                          + Foto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addGridItem('video')}
+                          className="rounded-lg border border-[#2b3648] bg-[#141b27] px-2.5 py-1 text-[11px] font-bold text-sky-300 hover:bg-[#1a2333]"
+                        >
+                          + Vídeo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={fillExampleHotGrid}
+                          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300 hover:bg-amber-500/20"
+                        >
+                          Modelo Hot 🔥
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Lista dos Itens do Grid */}
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {templateForm.mediaGrid.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          className="flex flex-wrap items-center gap-2 rounded-xl border border-[#202938] bg-[#111620] p-2"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="flex h-5 w-5 items-center justify-center rounded bg-[#1a2230] font-mono text-[10px] font-bold text-[#8fa0b5]">
+                              {idx + 1}
+                            </span>
+                            <div className="flex flex-col">
+                              <button
+                                type="button"
+                                onClick={() => moveGridItem(idx, 'up')}
+                                disabled={idx === 0}
+                                className="text-[#64748b] hover:text-white disabled:opacity-30"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveGridItem(idx, 'down')}
+                                disabled={idx === templateForm.mediaGrid.length - 1}
+                                className="text-[#64748b] hover:text-white disabled:opacity-30"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Miniatura */}
+                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#0a0d13] border border-[#2a3447]">
+                            <img src={item.url} alt="Grid" className="h-full w-full object-cover" />
+                          </div>
+
+                          {/* Input URL */}
+                          <input
+                            value={item.url}
+                            onChange={(e) => updateGridItem(item.id, { url: e.target.value })}
+                            placeholder="URL da mídia"
+                            className="input flex-1 min-w-[120px] text-[11px] py-1"
+                          />
+
+                          {/* Seletor de Posição Específica no Grid */}
+                          <select
+                            value={item.position || 'auto'}
+                            onChange={(e) =>
+                              updateGridItem(item.id, {
+                                position: e.target.value as TemplateGridItem['position'],
+                              })
+                            }
+                            className="rounded-lg border border-[#2a364a] bg-[#161c28] px-2 py-1 text-[11px] font-semibold text-[#d4f933]"
+                          >
+                            <option value="main-left">Principal (Esquerda)</option>
+                            <option value="top-right">Superior Direita</option>
+                            <option value="bottom-right">Inferior Direita</option>
+                            <option value="auto">Automático</option>
+                          </select>
+
+                          {/* Remover */}
+                          <button
+                            type="button"
+                            onClick={() => removeGridItem(item.id)}
+                            className="rounded-lg p-1.5 text-[#657388] hover:bg-rose-400/10 hover:text-rose-300"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botões de Ação Coloridos & Interativos 🎨 */}
+              <div className="rounded-2xl border border-[#242e3f] bg-[#0c1017] p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1c2433] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-[#d4f933]" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Botões de Ação Coloridos ({templateForm.buttons.length})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addButton}
+                    disabled={templateForm.buttons.length >= 8}
+                    className="btn-secondary text-xs py-1 px-2.5 font-bold text-[#d4f933] border-[#d4f933]/30"
+                  >
+                    + Adicionar Botão
+                  </button>
+                </div>
+
+                {/* Lista de Botões */}
+                <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                  {templateForm.buttons.map((btn) => (
+                    <div
+                      key={btn.id}
+                      className="rounded-xl border border-[#202938] bg-[#111620] p-2.5 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Texto do Botão */}
+                        <input
+                          value={btn.text}
+                          onChange={(e) => updateButton(btn.id, { text: e.target.value })}
+                          placeholder="Texto do botão (ex.: 💎 PLANO VIP)"
+                          className="input flex-1 min-w-[140px] text-xs py-1 font-semibold"
+                        />
+
+                        {/* Seletor de Cores Idêntico a outras funções */}
+                        <div className="flex items-center gap-1">
+                          {(['green', 'purple', 'amber', 'red', 'default'] as const).map((colorKey) => (
+                            <button
+                              key={colorKey}
+                              type="button"
+                              onClick={() => updateButton(btn.id, { color: colorKey })}
+                              className={`h-5 w-5 rounded-full border-2 transition ${
+                                btn.color === colorKey
+                                  ? 'border-white scale-110 shadow'
+                                  : 'border-transparent opacity-60 hover:opacity-100'
+                              } ${
+                                colorKey === 'green'
+                                  ? 'bg-[#3b7c3d]'
+                                  : colorKey === 'purple'
+                                  ? 'bg-[#5b3c88]'
+                                  : colorKey === 'amber'
+                                  ? 'bg-[#c58b1d]'
+                                  : colorKey === 'red'
+                                  ? 'bg-[#a33232]'
+                                  : 'bg-[#203246]'
+                              }`}
+                              title={`Cor: ${colorKey}`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Seletor de Linha */}
+                        <select
+                          value={btn.row}
+                          onChange={(e) => updateButton(btn.id, { row: Number(e.target.value) || 0 })}
+                          className="rounded-lg border border-[#2a364a] bg-[#161c28] px-2 py-1 text-[11px] font-semibold text-[#8ca0b5]"
+                          title="Linha do botão"
+                        >
+                          <option value={0}>Linha 1</option>
+                          <option value={1}>Linha 2</option>
+                          <option value={2}>Linha 3</option>
+                          <option value={3}>Linha 4</option>
+                        </select>
+
+                        {/* Remover Botão */}
+                        <button
+                          type="button"
+                          onClick={() => removeButton(btn.id)}
+                          className="rounded-lg p-1.5 text-[#657388] hover:bg-rose-400/10 hover:text-rose-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* URL ou Callback Data */}
+                      <div className="flex gap-2">
+                        <input
+                          value={btn.url}
+                          onChange={(e) => updateButton(btn.id, { url: e.target.value })}
+                          placeholder="Link de compra ou checkout (https://...)"
+                          className="input flex-1 text-[11px] py-1 border-[#1e2736]"
+                        />
+                        <input
+                          value={btn.callbackData}
+                          onChange={(e) => updateButton(btn.id, { callbackData: e.target.value })}
+                          placeholder="Ou comando (ex: menu, vip)"
+                          className="input w-36 text-[11px] py-1 border-[#1e2736]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  {templateForm.buttons.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-[#242e40] p-3 text-center text-xs text-[#73839b]">
+                      Nenhum botão configurado. Clique em <b>+ Adicionar Botão</b> para criar botões interativos coloridos.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="label" htmlFor="tpl-cat">Categoria</label>
-              <select
-                id="tpl-cat"
-                className="input"
-                value={templateForm.category}
-                onChange={(event) =>
-                  setTemplateForm({ ...templateForm, category: event.target.value as TemplateCategory })
-                }
-              >
-                {CATEGORIES.map((category) => (
-                  <option key={category.value} value={category.value}>{category.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="tpl-body">Mensagem</label>
-            <textarea
-              id="tpl-body"
-              className="input min-h-48 resize-y leading-relaxed"
-              value={templateForm.body}
-              onChange={(event) => setTemplateForm({ ...templateForm, body: event.target.value })}
-              maxLength={4096}
-              required
-            />
-            <div className="mt-1 flex justify-between text-[10px] text-[#657287]">
-              <span>**negrito** e `código` funcionam no Telegram.</span>
-              <span>{templateForm.body.length}/4096</span>
+
+            {/* Coluna Direita: Preview 100% Realista do Telegram */}
+            <div className="xl:col-span-5">
+              <div className="sticky top-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#d4f933] flex items-center gap-1.5">
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview 100% Realista no Telegram
+                  </span>
+                  <span className="text-[10px] text-[#718298]">Visão do Lead no Celular</span>
+                </div>
+
+                <div className="rounded-2xl border border-[#252f40] bg-[#090c12] p-3 shadow-xl">
+                  <TelegramPreview
+                    botName={currentBot ? `@${currentBot.username}` : 'Modelo Hot VIP 💋'}
+                    botAvatar={currentBot?.avatarUrl}
+                    text={templateForm.body}
+                    mediaUrl={templateForm.mediaMode === 'single' ? templateForm.mediaUrl : undefined}
+                    mediaType={templateForm.mediaMode === 'single' ? templateForm.mediaType : undefined}
+                    mediaGrid={
+                      templateForm.mediaMode === 'grid' && templateForm.mediaGrid.length >= 2
+                        ? templateForm.mediaGrid
+                        : undefined
+                    }
+                    buttons={templateForm.buttons.map((b) => ({
+                      text: b.text,
+                      url: b.url || undefined,
+                      callbackData: b.callbackData || undefined,
+                      color: b.color,
+                      row: b.row,
+                    }))}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </form>
@@ -889,13 +1501,47 @@ export function Automation({ state, selectedBotId, refresh }: AutomationProps) {
 
       <Modal
         open={Boolean(preview)}
-        onClose={() => setPreview(null)}
-        title={preview?.title || 'Prévia'}
-        description="É exatamente assim que a mensagem chega no Telegram."
-        footer={<button type="button" onClick={() => setPreview(null)} className="btn-secondary text-xs">Fechar</button>}
+        onClose={() => {
+          setPreview(null);
+          setPreviewTemplateObj(null);
+        }}
+        title={preview?.title || 'Prévia Realista no Telegram'}
+        description="É exatamente assim com balão escuro, botões coloridos e mídias que o lead recebe no celular."
+        footer={
+          <button
+            type="button"
+            onClick={() => {
+              setPreview(null);
+              setPreviewTemplateObj(null);
+            }}
+            className="btn-secondary text-xs"
+          >
+            Fechar
+          </button>
+        }
       >
-        <div className="rounded-2xl border border-[#232b3a] bg-[#0b0f14] p-4">
-          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#e6ebf2]">{preview?.text}</p>
+        <div className="rounded-2xl border border-[#232b3a] bg-[#0b0f14] p-4 flex justify-center">
+          <TelegramPreview
+            botName={currentBot ? `@${currentBot.username}` : 'Modelo Hot VIP 💋'}
+            botAvatar={currentBot?.avatarUrl}
+            text={preview?.text || ''}
+            mediaUrl={previewTemplateObj?.mediaMode === 'single' ? previewTemplateObj.mediaUrl : undefined}
+            mediaType={previewTemplateObj?.mediaMode === 'single' ? previewTemplateObj.mediaType : undefined}
+            mediaGrid={
+              previewTemplateObj?.mediaMode === 'grid' &&
+              previewTemplateObj.mediaGrid &&
+              previewTemplateObj.mediaGrid.length >= 2
+                ? previewTemplateObj.mediaGrid
+                : undefined
+            }
+            buttons={previewTemplateObj?.buttons?.map((b) => ({
+              text: b.text,
+              url: b.url || undefined,
+              callbackData: b.callbackData || undefined,
+              color: b.color,
+              row: b.row,
+            }))}
+          />
         </div>
       </Modal>
     </div>

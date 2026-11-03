@@ -179,6 +179,8 @@ export interface TemplateButton {
   text: string;
   url?: string;
   callbackData?: string;
+  color?: 'default' | 'green' | 'red' | 'purple' | 'amber';
+  row?: number;
 }
 
 export interface MessageTemplate {
@@ -188,6 +190,14 @@ export interface MessageTemplate {
   body: string;
   buttons: TemplateButton[];
   mediaUrl: string | null;
+  mediaType?: 'photo' | 'video' | 'animation' | 'none';
+  mediaMode?: 'single' | 'grid' | 'none';
+  mediaGrid?: Array<{
+    id: string;
+    url: string;
+    type: 'photo' | 'video';
+    position?: 'main-left' | 'top-right' | 'bottom-right' | 'auto';
+  }>;
   active: boolean;
   weight: number;
   /** Template de origem quando este foi criado pelo gerador de modelos. */
@@ -459,6 +469,14 @@ export interface CreateTemplateInput {
   body: string;
   buttons?: TemplateButton[];
   mediaUrl?: string | null;
+  mediaType?: 'photo' | 'video' | 'animation' | 'none';
+  mediaMode?: 'single' | 'grid' | 'none';
+  mediaGrid?: Array<{
+    id: string;
+    url: string;
+    type: 'photo' | 'video';
+    position?: 'main-left' | 'top-right' | 'bottom-right' | 'auto';
+  }>;
   weight?: number;
   active?: boolean;
   tags?: string[];

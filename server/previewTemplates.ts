@@ -42,3 +42,4 @@ export const DEFAULT_PREVIEW_TEMPLATES: PreviewTeaserTemplate[] = [
     suggestedTag: 'previas_chamada',
   },
 ];
+
