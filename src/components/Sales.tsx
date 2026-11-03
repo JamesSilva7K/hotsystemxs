@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   CheckCircle2,
+  ChevronDown,
   Copy,
   CreditCard,
   DollarSign,
@@ -547,35 +548,70 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
         )}
       </section>
 
-      <section className="card p-5">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <section className="card p-5 sm:p-6">
+        <div className="flex flex-col justify-between gap-4 border-b border-[#1c2434] pb-4 sm:flex-row sm:items-center">
           <div>
-            <h2 className="text-sm font-bold text-white">Compras</h2>
-            <p className="mt-1 text-[11px] text-[#7b879b]">
-              Tudo que o webhook da SyncPay registrar aparece aqui. Pendentes podem ser conferidos na hora.
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white">Compras & Transações</h2>
+              <span className="badge border-[#293448] bg-[#141924] text-[10px] text-[#93a2b7]">
+                {purchases.length} {purchases.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-[#7b879b]">
+              Tudo que o webhook da SyncPay e pagamentos PIX registrarem aparece aqui em tempo real.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              className="input max-w-[160px] text-xs"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value as 'todas' | PurchaseStatus)}
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="relative">
+              <select
+                className="h-10 w-40 appearance-none rounded-xl border border-[#273244] bg-[#0c1017] pl-3 pr-8 text-xs font-semibold text-[#ccd7e6] transition focus:border-[#d4f933] focus:outline-none"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as 'todas' | PurchaseStatus)}
+              >
+                <option value="todas">Todas as compras</option>
+                {(['pendente', 'pago', 'cancelado', 'reembolsado'] as PurchaseStatus[]).map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#708198]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setManualOpen(true)}
+              disabled={state.bots.length === 0}
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-[#2c374b] bg-[#151c27] px-3.5 text-xs font-semibold text-white transition hover:border-[#d4f933] hover:text-[#d4f933] disabled:opacity-40"
             >
-              <option value="todas">Todas</option>
-              {(['pendente', 'pago', 'cancelado', 'reembolsado'] as PurchaseStatus[]).map((status) => (
-                <option key={status} value={status}>{STATUS_LABEL[status]}</option>
-              ))}
-            </select>
-            <button type="button" onClick={() => setManualOpen(true)} disabled={state.bots.length === 0} className="btn-secondary text-xs">
-              <Plus className="h-3.5 w-3.5" /> Venda manual
+              <Plus className="h-3.5 w-3.5 text-[#d4f933]" />
+              <span>Venda manual</span>
             </button>
           </div>
         </div>
 
         {purchases.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-[#252e3f] bg-[#0c1017] p-6 text-center text-xs text-[#7b879b]">
-            Nenhuma compra {filter === 'todas' ? 'registrada' : `com status ${STATUS_LABEL[filter]}`}.
-          </p>
+          <div className="my-4 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#242e40] bg-[#0d1118]/60 py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#2d384c] bg-[#141924] text-[#d4f933] shadow-inner">
+              <ShoppingCart className="h-5 w-5" />
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-white">Nenhuma compra registrada</h3>
+            <p className="mt-1 max-w-sm text-xs text-[#738399]">
+              {filter === 'todas'
+                ? 'Novas transações aprovadas e PIX gerados aparecerão aqui em tempo real via webhook.'
+                : `Nenhuma compra encontrada com o status "${STATUS_LABEL[filter]}".`}
+            </p>
+            {filter === 'todas' && state.bots.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setManualOpen(true)}
+                className="mt-4 flex items-center gap-1.5 rounded-xl border border-[#d4f933]/30 bg-[#d4f933]/10 px-3.5 py-1.5 text-xs font-bold text-[#d4f933] transition hover:bg-[#d4f933]/20"
+              >
+                <Plus className="h-3.5 w-3.5" /> Registrar Venda Manual
+              </button>
+            )}
+          </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-xs">
@@ -664,8 +700,20 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
             </table>
           </div>
         )}
-        <div className="mt-3 text-[10px] text-[#657287]">
-          Total filtrado: {formatNumber(purchases.length)} compras · {formatBRL(purchases.reduce((sum, item) => sum + item.amountCents, 0))}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#1a212e] pt-3 text-xs text-[#75849a]">
+          <div className="flex items-center gap-2">
+            <span>
+              Total filtrado: <strong className="text-white">{formatNumber(purchases.length)}</strong>
+            </span>
+            <span>•</span>
+            <span>
+              Faturamento:{' '}
+              <strong className="text-[#d4f933]">
+                {formatBRL(purchases.reduce((sum, item) => sum + item.amountCents, 0))}
+              </strong>
+            </span>
+          </div>
+          <span className="text-[10px] text-[#616f84]">Sincronização em tempo real com SyncPay & Telegram</span>
         </div>
       </section>
 
