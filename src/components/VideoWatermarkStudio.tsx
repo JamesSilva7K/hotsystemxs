@@ -54,6 +54,7 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
   const [rotation, setRotation] = useState<number>(0);
   const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
+  const [logoScale, setLogoScale] = useState<number>(140);
 
   // Proteção Anti-Copyright
   const [antiCopyright, setAntiCopyright] = useState<boolean>(true);
@@ -91,7 +92,7 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
     setIsPlaying(false);
   };
 
-  // Upload de Logo de Marca D'água
+  // Upload de Logo de Marca D'água com Reconhecimento Imediato
   const handleLogoSelect = (file: File) => {
     if (!file.type.startsWith('image/')) {
       notify?.('error', 'Formato Inválido', 'Selecione uma imagem PNG ou JPG.');
@@ -102,11 +103,42 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
       const src = e.target?.result as string;
       setLogoSrc(src);
       const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        setLogoImage(img);
+        setWatermarkType('image');
+        if (position === 'banner-bottom') {
+          setPosition('bottom-right');
+        }
+        notify?.('success', 'Logo Reconhecida!', `${img.naturalWidth}x${img.naturalHeight}px carregada e renderizada no vídeo.`);
+      };
+      img.onerror = () => {
+        notify?.('error', 'Erro ao processar imagem', 'Não foi possível renderizar a imagem.');
+      };
       img.src = src;
-      img.onload = () => setLogoImage(img);
     };
     reader.readAsDataURL(file);
   };
+
+  // Suporte a Copiar e Colar (Ctrl + V) imagem de Logo diretamente da Área de Transferência
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            handleLogoSelect(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
 
   // Desenhar marca d'água no canvas
   const drawFrame = () => {
@@ -176,46 +208,83 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
       ctx.fillStyle = '#d4f933';
       ctx.fillRect(0, position === 'banner-bottom' ? yPos : yPos + bannerHeight - 2, w, 2);
 
-      // Texto do Banner
-      ctx.font = `bold ${Math.round(fontSize * (w / 800))}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = textColor;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 6;
-      ctx.fillText(text, w / 2, yPos + bannerHeight / 2);
+      if (watermarkType === 'image' && logoImage) {
+        // Logo centralizada dentro do banner
+        const maxLogoH = bannerHeight * 0.75;
+        const aspect = logoImage.width / logoImage.height;
+        const logoH = maxLogoH;
+        const logoW = logoH * aspect;
+        ctx.drawImage(logoImage, (w - logoW) / 2, yPos + (bannerHeight - logoH) / 2, logoW, logoH);
+      } else {
+        // Texto do Banner
+        ctx.font = `bold ${Math.round(fontSize * (w / 800))}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(text, w / 2, yPos + bannerHeight / 2);
+      }
     } else {
       // Posicionamento Pontual (Cantos ou Centro)
+      const margin = 24;
       let posX = w / 2;
       let posY = h / 2;
-      const margin = 24;
 
-      if (position === 'top-left') {
-        posX = margin;
-        posY = margin + fontSize;
-        ctx.textAlign = 'left';
-      } else if (position === 'top-right') {
-        posX = w - margin;
-        posY = margin + fontSize;
-        ctx.textAlign = 'right';
-      } else if (position === 'bottom-left') {
-        posX = margin;
-        posY = h - margin;
-        ctx.textAlign = 'left';
-      } else if (position === 'bottom-right') {
-        posX = w - margin;
-        posY = h - margin;
-        ctx.textAlign = 'right';
-      } else if (position === 'center') {
-        ctx.textAlign = 'center';
-      }
+      if (watermarkType === 'image' && logoImage) {
+        const renderScale = Math.round(logoScale * (w / 800));
+        const aspect = logoImage.height / logoImage.width;
+        const logoW = renderScale;
+        const logoH = logoW * aspect;
 
-      ctx.translate(posX, posY);
-      if (rotation !== 0) {
-        ctx.rotate((rotation * Math.PI) / 180);
-      }
+        if (position === 'top-left') {
+          posX = margin + logoW / 2;
+          posY = margin + logoH / 2;
+        } else if (position === 'top-right') {
+          posX = w - margin - logoW / 2;
+          posY = margin + logoH / 2;
+        } else if (position === 'bottom-left') {
+          posX = margin + logoW / 2;
+          posY = h - margin - logoH / 2;
+        } else if (position === 'bottom-right') {
+          posX = w - margin - logoW / 2;
+          posY = h - margin - logoH / 2;
+        } else if (position === 'center') {
+          posX = w / 2;
+          posY = h / 2;
+        }
 
-      if (watermarkType === 'text') {
+        ctx.translate(posX, posY);
+        if (rotation !== 0) {
+          ctx.rotate((rotation * Math.PI) / 180);
+        }
+        ctx.drawImage(logoImage, -logoW / 2, -logoH / 2, logoW, logoH);
+      } else {
+        if (position === 'top-left') {
+          posX = margin;
+          posY = margin + fontSize;
+          ctx.textAlign = 'left';
+        } else if (position === 'top-right') {
+          posX = w - margin;
+          posY = margin + fontSize;
+          ctx.textAlign = 'right';
+        } else if (position === 'bottom-left') {
+          posX = margin;
+          posY = h - margin;
+          ctx.textAlign = 'left';
+        } else if (position === 'bottom-right') {
+          posX = w - margin;
+          posY = h - margin;
+          ctx.textAlign = 'right';
+        } else if (position === 'center') {
+          ctx.textAlign = 'center';
+        }
+
+        ctx.translate(posX, posY);
+        if (rotation !== 0) {
+          ctx.rotate((rotation * Math.PI) / 180);
+        }
+
         const renderFontSize = Math.round(fontSize * (w / 800));
         ctx.font = `bold ${renderFontSize}px system-ui, -apple-system, sans-serif`;
 
@@ -237,11 +306,6 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
         ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
         ctx.shadowBlur = 8;
         ctx.fillText(text, 0, 0);
-      } else if (watermarkType === 'image' && logoImage) {
-        const logoW = Math.round(140 * (w / 800));
-        const aspect = logoImage.height / logoImage.width;
-        const logoH = logoW * aspect;
-        ctx.drawImage(logoImage, -logoW / 2, -logoH / 2, logoW, logoH);
       }
     }
 
@@ -544,24 +608,90 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
                 />
               </div>
             ) : (
-              <div>
-                <label className="label">Upload do Logo (PNG Transparente)</label>
-                <div
-                  onClick={() => logoInputRef.current?.click()}
-                  className="flex cursor-pointer items-center justify-between rounded-xl border border-[#273244] bg-[#161c28] p-3 text-xs"
-                >
-                  <span className="text-[#a4b1c5]">{logoSrc ? 'Logo carregado com sucesso' : 'Escolher arquivo de logo PNG'}</span>
-                  <Upload className="h-4 w-4 text-[#d4f933]" />
-                  <input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) handleLogoSelect(e.target.files[0]);
+              <div className="space-y-3">
+                <label className="label">Logo ou Assinatura (PNG Transparente / SVG / JPG)</label>
+
+                {logoSrc && logoImage ? (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-500/40 bg-black/60 p-1">
+                        <img src={logoSrc} alt="Logo" className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                          <span className="text-xs font-bold text-white">Logo Reconhecida e Ativa</span>
+                        </div>
+                        <span className="text-[10px] text-[#8ea0b7]">
+                          Dimensão: {logoImage.naturalWidth}x{logoImage.naturalHeight}px
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="rounded-lg border border-[#2e3b50] bg-[#161c28] px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:border-[#d4f933] hover:text-[#d4f933]"
+                      >
+                        Trocar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoImage(null);
+                          setLogoSrc(null);
+                        }}
+                        className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-1.5 text-rose-300 transition hover:bg-rose-500/20"
+                        title="Remover Logo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => logoInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (e.dataTransfer.files[0]) handleLogoSelect(e.dataTransfer.files[0]);
                     }}
-                  />
-                </div>
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#293448] bg-[#131924] p-5 text-center transition hover:border-[#d4f933] hover:bg-[#161f2f]"
+                  >
+                    <Upload className="h-6 w-6 text-[#d4f933]" />
+                    <span className="mt-1.5 text-xs font-bold text-white">Clique para escolher ou arraste a Logo PNG</span>
+                    <span className="text-[10px] text-[#718299]">PNG transparente sem fundo recomendado</span>
+                  </div>
+                )}
+
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleLogoSelect(e.target.files[0]);
+                  }}
+                />
+
+                {/* Slider de Escala / Tamanho da Logo */}
+                {logoImage && (
+                  <div className="rounded-xl border border-[#232d3d] bg-[#10141d] p-3">
+                    <div className="flex justify-between text-[11px] font-semibold text-[#8e9cb1]">
+                      <span>Tamanho da Logo (Escala)</span>
+                      <span className="font-mono text-[#d4f933]">{logoScale}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="320"
+                      value={logoScale}
+                      onChange={(e) => setLogoScale(Number(e.target.value))}
+                      className="mt-1 w-full accent-[#d4f933]"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -576,9 +706,9 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
                 >
                   <option value="banner-bottom">Faixa Banner Rodapé (Recomendado)</option>
                   <option value="banner-top">Faixa Banner Topo</option>
-                  <option value="bottom-right">Canto Inferior Direito</option>
-                  <option value="bottom-left">Canto Inferior Esquerdo</option>
+                  <option value="bottom-right">Canto Inferior Direito (Padrão VIP)</option>
                   <option value="top-right">Canto Superior Direito</option>
+                  <option value="bottom-left">Canto Inferior Esquerdo</option>
                   <option value="top-left">Canto Superior Esquerdo</option>
                   <option value="center">Centro da Tela</option>
                 </select>

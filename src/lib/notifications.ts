@@ -126,15 +126,46 @@ class NotificationManager {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission === 'granted' && this.pushEnabled) {
       try {
-        new Notification(title, {
-          body,
-          icon,
-          badge: icon,
-        });
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then((reg) => {
+            void (reg as unknown as { showNotification: (t: string, o?: Record<string, unknown>) => Promise<void> }).showNotification(title, {
+              body,
+              icon,
+              badge: icon,
+              vibrate: [200, 100, 200],
+            });
+          });
+        } else {
+          new Notification(title, {
+            body,
+            icon,
+            badge: icon,
+          });
+        }
       } catch {
-        // Fallback em alguns aparelhos mobile
+        // Fallback em alguns navegadores mobile
       }
     }
+  }
+
+  /**
+   * Notificação personalizada profissional de Venda / PIX para mobile e desktop
+   */
+  notifySale(details: {
+    valor: number;
+    leadName?: string;
+    botName?: string;
+    tipo?: string;
+  }): void {
+    const formattedPrice = details.valor.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+    const now = new Date();
+    const dataHora = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const title = `💰 ${details.tipo || 'PIX Aprovado'}: ${formattedPrice}`;
+    const body = `🔥 Lead: ${details.leadName || 'Assinante VIP'} (${details.botName || 'Modelo Hot'})\n⏰ ${dataHora}`;
+    this.notify(title, body);
   }
 
   get isSoundEnabled(): boolean {

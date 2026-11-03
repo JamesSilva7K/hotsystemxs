@@ -27,11 +27,11 @@ export interface TelegramPreviewProps {
 }
 
 const BUTTON_COLORS = {
-  default: 'bg-[#2b5278] hover:bg-[#32618e] text-white border-transparent',
-  green: 'bg-[#2ea043] hover:bg-[#3fb950] text-white border-[#3fb950]/30 shadow-emerald-500/10',
-  red: 'bg-[#d03a3a] hover:bg-[#e04545] text-white border-[#f85149]/30 shadow-rose-500/10',
-  purple: 'bg-[#6f42c1] hover:bg-[#8250df] text-white border-[#8957e5]/30 shadow-purple-500/10',
-  amber: 'bg-[#d29922] hover:bg-[#e3b341] text-black font-bold border-amber-400/40',
+  default: 'bg-[#203246] hover:bg-[#283e57] text-[#e1ebf5] border-transparent',
+  green: 'bg-[#3b7c3d] hover:bg-[#438f46] text-white border-transparent font-bold',
+  red: 'bg-[#a33232] hover:bg-[#b83838] text-white border-transparent',
+  purple: 'bg-[#5b3c88] hover:bg-[#6b479e] text-white border-transparent',
+  amber: 'bg-[#c58b1d] hover:bg-[#d99a22] text-black font-bold border-transparent',
 };
 
 export function TelegramPreview({
@@ -86,9 +86,19 @@ export function TelegramPreview({
       </div>
 
       {/* Área da Conversa com Papel de Parede Escuro do Telegram */}
-      <div className="relative flex-1 space-y-3 bg-[#0e1621] p-3.5 sm:p-4">
+      <div className="relative flex-1 space-y-3 bg-[#0e1621] p-3 sm:p-4 pl-10 sm:pl-12">
         {/* Balão de Mensagem */}
-        <div className="relative ml-auto w-full max-w-[340px] rounded-2xl rounded-tr-sm border border-[#242f3d] bg-[#182533] p-3 shadow-md">
+        <div className="relative w-full rounded-2xl rounded-tl-sm border border-[#242f3d] bg-[#182533] p-3 shadow-md">
+          {/* Avatar no Canto Inferior Esquerdo (Idêntico ao Telegram Oficial) */}
+          <div className="absolute -left-9 bottom-0 h-7 w-7 overflow-hidden rounded-full border border-[#242f3d] bg-[#1d2733] shadow">
+            {botAvatar ? (
+              <img src={botAvatar} alt={botName} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-pink-600 to-amber-500 text-[10px] font-bold text-white">
+                {botName.slice(0, 1)}
+              </div>
+            )}
+          </div>
           {/* Álbum / Grid de Mídias (Estilo Telegram com Múltiplas Posições) */}
           {mediaGrid && mediaGrid.length >= 2 ? (
             <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
@@ -232,8 +242,8 @@ export function TelegramPreview({
           </div>
 
           {/* Rodapé com Hora e Status de Entrega */}
-          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[#6c7883]">
-            <span>18:55</span>
+          <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-[#788a9c]">
+            <span>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
             <CheckCheck className="h-3.5 w-3.5 text-[#539fd6]" />
           </div>
 

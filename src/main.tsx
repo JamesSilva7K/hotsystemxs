@@ -11,3 +11,17 @@ createRoot(document.getElementById('root')!).render(
     </ToastProvider>
   </React.StrictMode>
 );
+
+// Registrar Service Worker para PWA e Notificações Mobile
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('[PWA] Service Worker registrado com sucesso:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[PWA] Falha ao registrar Service Worker:', err);
+      });
+  });
+}

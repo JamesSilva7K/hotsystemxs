@@ -1,0 +1,21 @@
+{
+  "name": "Hot System VIP · Gestão de Modelos Hot",
+  "short_name": "HotSystem",
+  "description": "Painel de alta conversão para gestão de Modelos Hot, automação Telegram e vendas VIP.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0d11",
+  "theme_color": "#0b0d11",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64 128x128 192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

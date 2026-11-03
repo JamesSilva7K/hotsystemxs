@@ -52,29 +52,8 @@ interface MessageButton {
 
 const TEMPLATES = [
   {
-    name: 'Upsell Premiado (Hot 🔥)',
-    text: `😱🔥 Eitaaaa! Sua compra foi PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 vídeos extras meu mais N0VINHAA+18 perdendo a virgindade...\n😈 Spoilers, áudios e vídeos que não posto no grupo\n\n🎁 BÔNUS ESPECIAL:\n✅ Meu WPP pessoal\n✅ Grupo lives, no grupo de live já tem + de 15 lives gravadas 😈\n\n➡️ Só por R$7,90 e acesso vitalício IMEDIATO!`,
-    buttons: [
-      { id: 1, text: '🔥 ADICIONAR', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '❌ RECUSAR', url: 'https://t.me', color: 'red' as const, row: 0 },
-    ],
-  },
-  {
-    name: 'Cobrança PIX Copia e Cola ⚡',
-    text: `✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`00020126870014br.gov.bcb.pix2565pix.basspago.com.br/qr/v3/at/8698aa5a-9b67-4dda-b9a4-d3161d3b7d655204000053039865802BR5920SYNC_TECNOLOGIA_LTDA6008BRASILIA62070503***6304373F\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`,
-    buttons: [
-      { id: 1, text: '📋 Copiar Código PIX', url: 'https://t.me', color: 'purple' as const, row: 0 },
-    ],
-  },
-  {
-    name: 'Boas-vindas VIP com Áudio 💋',
-    text: `Oiii, que bom te ver por aqui amor! 😈\n\nAcabei de soltar uma prévia exclusiva que você nunca viu em lugar nenhum.\n\nClica aqui embaixo para desbloquear o meu VIP completo com chamada de vídeo! 👇`,
-    buttons: [
-      { id: 1, text: '💋 ACESSAR VIP COMPLETO', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-    ],
-  },
-  {
     name: 'Santinha / Melhores Amigos (Grid Hot 🔥)',
+    category: 'Quebra de Objeção',
     text: `Na igreja eu sou certinha... mas aqui você vê o lado meu que quase ninguém conhece. 😇🔥\n\nComo falei no Instagram, me converti recentemente e estou mudando muita coisa na minha vida e esse grupo eu vou fechar. ❗️\n\nQuem entrar agora garante acesso ao conteúdo que já tem lá dentro e continua recebendo as próximas fotos e videos exclusivos.\n\nLá no meu Melhores Amigos você encontra:\n\n😈 Meus vídeos mais secretos\n🔥 Meu lado mais provocante, sem pose de santinha\n🎁 Conteúdo exclusivo todos os dias\n📱 Meu WhatsApp pessoal pra conversar e fazer chamada de vídeo\n\n👇 Vem me ver enquanto da tempo!`,
     buttons: [
       { id: 1, text: 'MENSAL + 🎁 por R$ 19.94', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
@@ -104,6 +83,59 @@ const TEMPLATES = [
         position: 'bottom-right' as const,
         order: 2,
       },
+    ],
+  },
+  {
+    name: 'Abordagem & Conquista (Primeiro Contato 😈)',
+    category: 'Abordagem',
+    text: `Oie amorzinho... que bom que você me chamou aqui no Telegram! 🙈\n\nEu sou a {nome_bot}, e preparei esse cantinho bem íntimo e sem censura só pra nós dois.\n\nVocê prefere ver umas fotinhas provocantes agora ou prefere que eu te mande um áudio me apresentando melhor? 😈`,
+    buttons: [
+      { id: 1, text: '🔥 QUERO VER FOTO AGORA', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '🎙️ ME MANDA UM ÁUDIO', url: 'https://t.me', color: 'purple' as const, row: 0 },
+    ],
+  },
+  {
+    name: 'Apresentação de Planos VIP ({nome_bot} 💎)',
+    category: 'Planos & VIP',
+    text: `😈 Se você achou as prévias quentes, você não imagina o que te espera no meu VIP!\n\nLá dentro com a {nome_bot} você tem:\n✨ Mais de 300 vídeos sem censura nem tarjas\n🎥 Chamadas de vídeo individuais toda semana\n💬 Meu WhatsApp pessoal direto comigo\n🔞 Conteúdo novo todos os dias atualizado!\n\nEscolha seu plano e vem comigo agora antes que as vagas encerrem:`,
+    buttons: [
+      { id: 1, text: '💎 VIP MENSAL - R$ 19,90', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '👑 VIP VITALÍCIO + WPP - R$ 39,90', url: 'https://syncpayments.com.br', color: 'purple' as const, row: 1 },
+      { id: 3, text: '🔥 1 DIA DE TESTE - R$ 9,90', url: 'https://syncpayments.com.br', color: 'default' as const, row: 2 },
+    ],
+  },
+  {
+    name: 'Promoção Relâmpago (60% OFF ⚡)',
+    category: 'Promoção',
+    text: `🚨 ATENÇÃO AMOR: Liberamos apenas 5 Vagas com 60% OFF!\n\nA {nome_bot} acabou de abrir um lote promocional que vai durar só pelos próximos 15 minutos.\n\nDe ~~R$ 49,90~~ por APENAS R$ 19,90 com acesso IMEDIATO a todo o meu acervo VIP!\n\nCorre antes que o link expire: 👇`,
+    buttons: [
+      { id: 1, text: '⚡ GARANTIR MINHA VAGA COM 60% OFF', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+    ],
+  },
+  {
+    name: 'Recuperação de Lead Inativo (PIX Pendente 🎁)',
+    category: 'Recuperação',
+    text: `Amor, vi que você gerou o seu PIX mas ainda não finalizou a sua entrada no meu VIP... aconteceu alguma coisa? 🥺\n\nEu separei um presentinho especial pra você: se você pagar nos próximos 10 minutos, eu vou te mandar um vídeo exclusivo de 8 minutos no seu privado que ninguém tem!\n\nClica aqui embaixo para copiar o PIX ou pagar no cartão:`,
+    buttons: [
+      { id: 1, text: '🎁 CONCLUIR MEU ACESSO COM BÔNUS', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '💬 FALAR COM SUPORTE', url: 'https://t.me', color: 'default' as const, row: 1 },
+    ],
+  },
+  {
+    name: 'Upsell Premiado Nº #75 (Hot 🔥)',
+    category: 'Upsell',
+    text: `😱🔥 Eitaaaa! Sua compra foi PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 vídeos extras meu mais N0VINHAA+18 perdendo a virgindade...\n😈 Spoilers, áudios e vídeos que não posto no grupo\n\n🎁 BÔNUS ESPECIAL:\n✅ Meu WPP pessoal\n✅ Grupo lives, no grupo de live já tem + de 15 lives gravadas 😈\n\n➡️ Só por R$7,90 e acesso vitalício IMEDIATO!`,
+    buttons: [
+      { id: 1, text: '🔥 ADICIONAR AO PEDIDO', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '❌ RECUSAR OFERTA', url: 'https://t.me', color: 'red' as const, row: 0 },
+    ],
+  },
+  {
+    name: 'Cobrança PIX Copia e Cola ⚡',
+    category: 'Cobrança',
+    text: `✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`00020126870014br.gov.bcb.pix2565pix.basspago.com.br/qr/v3/at/8698aa5a-9b67-4dda-b9a4-d3161d3b7d655204000053039865802BR5920SYNC_TECNOLOGIA_LTDA6008BRASILIA62070503***6304373F\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`,
+    buttons: [
+      { id: 1, text: '📋 Copiar Código PIX', url: 'https://t.me', color: 'purple' as const, row: 0 },
     ],
   },
 ];
@@ -254,9 +286,18 @@ export function Messages({
     return chatId ? 1 : 0;
   }, [mode, audience, scopedLeads, leadId, chatId]);
 
+  const getBotDisplayName = () => bot?.firstName || (bot?.username ? `@${bot.username}` : 'Modelo Hot');
+
   const applyTemplate = (tpl: (typeof TEMPLATES)[number]) => {
-    setText(tpl.text);
-    setButtons([...tpl.buttons]);
+    const botName = getBotDisplayName();
+    const replacedText = tpl.text.replaceAll('{nome_bot}', botName);
+    setText(replacedText);
+    setButtons(
+      tpl.buttons.map((b) => ({
+        ...b,
+        text: b.text.replaceAll('{nome_bot}', botName),
+      }))
+    );
     if ('mediaMode' in tpl && tpl.mediaMode === 'grid' && tpl.mediaGrid) {
       setMediaMode('grid');
       setMediaGrid([...tpl.mediaGrid]);
@@ -264,7 +305,12 @@ export function Messages({
       setMediaMode('single');
       setMediaGrid([]);
     }
-    notify('info', 'Modelo aplicado', tpl.name);
+    notify('info', 'Estratégia aplicada', `${tpl.name}`);
+  };
+
+  const insertTag = (tag: string) => {
+    const val = tag === '{nome_bot}' ? getBotDisplayName() : tag;
+    setText((prev) => prev + (prev.endsWith(' ') || prev.endsWith('\n') || !prev ? '' : ' ') + val);
   };
 
   const addGridItem = (type: 'photo' | 'video' = 'photo') => {
@@ -376,10 +422,13 @@ export function Messages({
   return (
     <div className="space-y-5 pb-20 md:pb-6">
       {/* Barra Superior com Seleção de Modelos Rápidos */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#2b3548] bg-[#10141d] p-3.5">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#d4f933]" />
-          <span className="text-xs font-bold text-white">Modelos de Mensagem Prontos:</span>
+      <div className="space-y-2.5 rounded-2xl border border-[#2b3548] bg-[#10141d] p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#d4f933]" />
+            <span className="text-xs font-bold text-white">Estratégias de Mensagem de Alta Conversão</span>
+          </div>
+          <span className="text-[10px] text-[#7d8ca4]">Personaliza com o nome real do bot ({getBotDisplayName()}) e carrega mídias/botões</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {TEMPLATES.map((tpl) => (
@@ -387,9 +436,10 @@ export function Messages({
               key={tpl.name}
               type="button"
               onClick={() => applyTemplate(tpl)}
-              className="rounded-xl border border-[#273244] bg-[#161c28] px-3 py-1.5 text-[11px] font-semibold text-[#ccd6e4] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10 hover:text-[#d4f933]"
+              className="flex items-center gap-1.5 rounded-xl border border-[#273244] bg-[#161c28] px-3 py-1.5 text-[11px] font-semibold text-[#ccd6e4] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10 hover:text-[#d4f933]"
             >
-              {tpl.name}
+              <span className="rounded bg-[#202838] px-1.5 py-0.5 text-[9px] font-bold text-[#8fa0b7]">{tpl.category}</span>
+              <span>{tpl.name}</span>
             </button>
           ))}
         </div>
@@ -512,8 +562,37 @@ export function Messages({
 
             {/* Texto da Mensagem */}
             <div>
-              <div className="mb-1 flex items-center justify-between">
-                <label className="label mb-0" htmlFor="message-text">Texto da Mensagem</label>
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="label mb-0" htmlFor="message-text">Texto da Mensagem</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[#718096]">Inserir:</span>
+                    <button
+                      type="button"
+                      onClick={() => insertTag('{nome_bot}')}
+                      className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#d4f933] hover:bg-[#d4f933]/15"
+                      title="Insere o nome da Modelo / Bot atual"
+                    >
+                      + Nome da Modelo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertTag('https://syncpayments.com.br')}
+                      className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#6ee7b7] hover:bg-[#6ee7b7]/15"
+                      title="Insere link de checkout"
+                    >
+                      + Link Checkout
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertTag('{chave_pix}')}
+                      className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#c084fc] hover:bg-[#c084fc]/15"
+                      title="Insere chave PIX"
+                    >
+                      + Código PIX
+                    </button>
+                  </div>
+                </div>
                 <span className={`text-[10px] ${text.length > charLimit ? 'text-rose-400 font-bold' : 'text-[#77859c]'}`}>
                   {text.length}/{charLimit} caracteres
                 </span>

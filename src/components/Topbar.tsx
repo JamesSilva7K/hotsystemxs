@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Bell, BellOff, ChevronDown, RefreshCw, ShieldCheck, Volume2, VolumeX } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, BellOff, ChevronDown, Download, RefreshCw, ShieldCheck, Smartphone, Volume2, VolumeX } from 'lucide-react';
 import type { Bot } from '@shared/types';
 import type { NavTab } from '../lib/nav';
 import { NAV_ITEMS } from '../lib/nav';
 import { Dot } from './StatusBadge';
 import { relativeTime } from '../lib/format';
 import { notifications } from '../lib/notifications';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 interface TopbarProps {
   tab: NavTab;
@@ -31,13 +36,51 @@ export function Topbar({
   const meta = NAV_ITEMS.find((item) => item.id === tab) || NAV_ITEMS[0];
   const selected = bots.find((bot) => bot.id === selectedBotId);
   const [soundActive, setSoundActive] = useState(() => notifications.isSoundEnabled);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Detectar se já está instalado como PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as unknown as { standalone?: boolean }).standalone) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      alert('Para instalar no iOS/Safari: toque no botão Compartilhar (quadrado com seta) e escolha "Adicionar à Tela de Início". No Chrome/Android: toque nos 3 pontinhos e em "Instalar aplicativo".');
+      return;
+    }
+    await deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    }
+  };
 
   const toggleNotifications = async () => {
     const next = !soundActive;
     setSoundActive(next);
     notifications.setSoundEnabled(next);
     if (next) {
-      await notifications.requestPermission();
+      const granted = await notifications.requestPermission();
+      if (granted) {
+        notifications.notifySale({
+          valor: 39.90,
+          leadName: 'Marcos Silva',
+          botName: selected ? `@${selected.username}` : 'Modelo Hot',
+          tipo: 'PIX Teste Conectado',
+        });
+      }
     }
   };
 
@@ -58,6 +101,20 @@ export function Topbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* Botão de Instalação PWA no Celular / Desktop */}
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={handleInstallApp}
+              className="flex items-center gap-1.5 rounded-xl border border-[#293246] bg-[#121722] px-2.5 py-1.5 text-xs font-semibold text-[#c8d3e6] transition hover:border-[#d4f933] hover:text-[#d4f933] sm:px-3 sm:py-2"
+              title="Instalar Hot System na Área de Trabalho ou Tela Inicial do Celular"
+            >
+              <Smartphone className="h-3.5 w-3.5 text-[#d4f933]" />
+              <span className="hidden sm:inline">Instalar App</span>
+              <span className="sm:hidden">App</span>
+            </button>
+          )}
+
           {/* Botão de Notificações de Vendas e PIX (Som + Push) */}
           <button
             type="button"

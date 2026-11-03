@@ -30,6 +30,7 @@ import { Avatar } from './Avatar';
 import { Modal } from './Modal';
 import { Dot } from './StatusBadge';
 import { useToast } from './Toast';
+import { LanguageSelector } from './LanguageSelector';
 import type { NavTab } from '../lib/nav';
 
 interface BotsProps {
@@ -209,15 +210,7 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-[#79869c]">Idioma do Atendimento</label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value as typeof language)}
-                    className="input mt-1 text-xs font-semibold"
-                  >
-                    <option value="pt">🇧🇷 Português (Brasil)</option>
-                    <option value="en">🇺🇸 English (Global)</option>
-                    <option value="es">🇪🇸 Español (Hispano)</option>
-                  </select>
+                  <LanguageSelector value={language} onChange={setLanguage} className="mt-1" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-[#79869c]">Categoria / Nicho</label>
