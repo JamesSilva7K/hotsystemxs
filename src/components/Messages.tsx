@@ -3,12 +3,14 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
+  Bot as BotIcon,
   CheckCircle2,
   FileVideo,
   Flame,
   Globe,
   Image as ImageIcon,
   LayoutGrid,
+  Lightbulb,
   Link2,
   Loader2,
   MessageSquare,
@@ -17,9 +19,12 @@ import {
   Send,
   Sparkles,
   Trash2,
+  TrendingUp,
   Upload,
   Users,
   Video,
+  Wand2,
+  Zap,
 } from 'lucide-react';
 import type { AppState, Lead, MediaGridItem } from '@shared/types';
 import type { NavTab } from '../lib/nav';
@@ -663,6 +668,138 @@ export function Messages({
     setMediaGrid(updated);
   };
 
+  // Análise Inteligente de Copywriting em Tempo Real (Reconhece o estilo do Admin e manda dicas/exemplos)
+  const copyAnalysis = useMemo(() => {
+    const raw = text.toLowerCase();
+    const len = text.trim().length;
+
+    let tone = '✍️ Rascunho Livre';
+    let toneColor = 'text-[#94a3b8] border-[#334155] bg-[#1e293b]/40';
+
+    if (raw.includes('pix') || raw.includes('pagar') || raw.includes('r$') || raw.includes('%') || raw.includes('desconto') || raw.includes('lote') || raw.includes('cerveja')) {
+      tone = '💰 Recuperação & Fechamento';
+      toneColor = 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10';
+    } else if (raw.includes('foto') || raw.includes('video') || raw.includes('vídeo') || raw.includes('banho') || raw.includes('áudio') || raw.includes('gemido') || raw.includes('buc3t4') || raw.includes('pelada') || raw.includes('c0ñit0') || raw.includes('p*ssy')) {
+      tone = '🔥 Provocação Sensorial & Hot';
+      toneColor = 'text-rose-300 border-rose-500/30 bg-rose-500/10';
+    } else if (raw.includes('vip') || raw.includes('canal') || raw.includes('vitalício') || raw.includes('grupo') || raw.includes('planos')) {
+      tone = '💎 Apresentação VIP';
+      toneColor = 'text-purple-300 border-purple-500/30 bg-purple-500/10';
+    } else if (raw.includes('oi') || raw.includes('oie') || raw.includes('amor') || raw.includes('prazer') || raw.includes('conheceu')) {
+      tone = '🙈 Abordagem & Conexão';
+      toneColor = 'text-sky-300 border-sky-500/30 bg-sky-500/10';
+    }
+
+    // Critérios de Score de Conversão (0 a 100)
+    let score = 0;
+    const tips: Array<{ text: string; actionText?: string; action?: () => void }> = [];
+
+    // 1. Gancho & Tamanho
+    if (len >= 30) score += 20;
+    else {
+      tips.push({ text: 'O texto está curto. Adicione uma pergunta ou provocação inicial.' });
+    }
+
+    // 2. Personalização com o nome da modelo
+    const botName = getBotDisplayName();
+    if (raw.includes('{nome_bot}') || raw.includes(botName.toLowerCase()) || raw.includes('eu sou a') || raw.includes("i'm ") || raw.includes('soy ')) {
+      score += 20;
+    } else {
+      tips.push({
+        text: `Personalize com o nome da modelo para aumentar a taxa de resposta.`,
+        actionText: `+ Inserir ${botName}`,
+        action: () => insertTag('{nome_bot}'),
+      });
+    }
+
+    // 3. Gatilho de Escassez / Urgência
+    if (raw.includes('minuto') || raw.includes('hoje') || raw.includes('vagas') || raw.includes('lote') || raw.includes('agora') || raw.includes('último') || raw.includes('encerra') || raw.includes('expir')) {
+      score += 20;
+    } else {
+      tips.push({
+        text: 'Adicione um prazo curto (ex: 15 minutos) ou escassez de vagas.',
+        actionText: '+ Adicionar Escassez',
+        action: () => {
+          setText((prev) => `${prev.trim()}\n\n⏳ Vagas promocionais liberadas apenas pelos próximos 15 minutos!`);
+        },
+      });
+    }
+
+    // 4. Elemento Sensorial / Provocação
+    if (raw.includes('foto') || raw.includes('vídeo') || raw.includes('video') || raw.includes('áudio') || raw.includes('grava') || raw.includes('banho') || raw.includes('cama') || raw.includes('segredo') || raw.includes('exclusiv')) {
+      score += 20;
+    } else {
+      tips.push({
+        text: 'Mencione um vídeo ou áudio proibido que o lead receberá ao entrar.',
+        actionText: '+ Inserir Gatilho Sensorial',
+        action: () => {
+          setText((prev) => `${prev.trim()}\n\n😈 Gravei um vídeo sem tarjas na cama que vou te mandar no privado...`);
+        },
+      });
+    }
+
+    // 5. Chamada para Ação Clara (CTA)
+    if (raw.includes('clic') || raw.includes('entra') || raw.includes('garant') || raw.includes('botão') || raw.includes('toca') || raw.includes('link') || raw.includes('👇') || raw.includes('➡️') || buttons.length > 0) {
+      score += 20;
+    } else {
+      tips.push({
+        text: 'Indique onde o lead deve clicar para pagar ou desbloquear agora.',
+        actionText: '+ Inserir Chamada para Ação',
+        action: () => {
+          setText((prev) => `${prev.trim()}\n\n👇 Clica no botão abaixo para garantir sua vaga agora:`);
+        },
+      });
+    }
+
+    // Exemplos rápidos de copywriting de alta conversão adaptados ao idioma
+    const suggestions = templateLang === 'en'
+      ? [
+          {
+            title: '🔥 Hot Bedroom Hook',
+            snippet: 'I was just getting out of the shower thinking of you... wanna see what I recorded on my phone? 🚿😈',
+          },
+          {
+            title: '⚡ 30% Discount Urgency',
+            snippet: '30% OFF active for the next 10 minutes only! Less than a drink at the bar to unlock everything: 🍺➡️💦',
+          },
+          {
+            title: '💎 VIP Lifetime Upsell',
+            snippet: 'Get lifetime access today and receive my personal WhatsApp for private late night video calls. 💋',
+          },
+        ]
+      : templateLang === 'es'
+      ? [
+          {
+            title: '🔥 Gancho Sensual & Ducha',
+            snippet: 'Estaba saliendo de la ducha pensando en ti... ¿quieres ver lo que grabé en mi celular? 🚿😈',
+          },
+          {
+            title: '⚡ Urgencia 30% OFF',
+            snippet: '¡30% OFF activo solo por los próximos 10 minutos! Menos que una cerveza para ver todo sin censura: 🍺➡️💦',
+          },
+          {
+            title: '💎 Acceso Vitalicio & WhatsApp',
+            snippet: 'Asegura tu acceso vitalicio hoy y llévate mi WhatsApp personal para llamadas privadas de noche. 💋',
+          },
+        ]
+      : [
+          {
+            title: '🔥 Gancho do Banho / Sensorial',
+            snippet: 'Tava saindo do banho agora pensando em você... quer ver o que eu gravei na tela do celular? 🚿😈',
+          },
+          {
+            title: '⚡ Urgência 30% OFF (Mais barato que cerveja)',
+            snippet: '30% OFF ativo só pelos próximos 10 minutos! Menos que uma cerveja no bar pra me ver todinha: 🍺➡️💦',
+          },
+          {
+            title: '💎 Fechamento Vitalício + WhatsApp',
+            snippet: 'Quem garantir o vitalício hoje ainda leva meu WhatsApp pessoal pra conversar e fazer chamada de vídeo. 💋',
+          },
+        ];
+
+    return { tone, toneColor, score, tips, suggestions };
+  }, [text, templateLang, buttons.length, bot]);
+
   const send = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!bot) {
@@ -1019,6 +1156,110 @@ export function Messages({
                 placeholder="Escreva sua mensagem..."
                 className="input min-h-[140px] resize-y font-sans leading-relaxed"
               />
+
+              {/* Assistente de Copywriting Inteligente em Tempo Real */}
+              <div className="mt-2.5 space-y-2.5 rounded-2xl border border-[#2b364a] bg-[#0e131d] p-3.5 shadow-md">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1c2433] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
+                      <Wand2 className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white">Assistente de Copywriting da Modelo</span>
+                        <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold ${copyAnalysis.toneColor}`}>
+                          {copyAnalysis.tone}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-[#78889e]">
+                        Reconhece o que você escreve e oferece ganchos e dicas para aumentar a conversão
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Termômetro de Poder de Conversão */}
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-white">
+                        <TrendingUp className="h-3 w-3 text-[#d4f933]" />
+                        <span>{copyAnalysis.score}%</span>
+                      </div>
+                      <div className="text-[9px] text-[#6d7c92]">Poder de Conversão</div>
+                    </div>
+                    <div className="h-2 w-16 overflow-hidden rounded-full bg-[#1b2230]">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          copyAnalysis.score >= 80
+                            ? 'bg-emerald-400'
+                            : copyAnalysis.score >= 50
+                            ? 'bg-[#d4f933]'
+                            : 'bg-amber-400'
+                        }`}
+                        style={{ width: `${copyAnalysis.score}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dicas Inteligentes Contextuais */}
+                {copyAnalysis.tips.length > 0 && (
+                  <div className="space-y-1.5">
+                    {copyAnalysis.tips.slice(0, 2).map((tip, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#242e3f] bg-[#121824] px-3 py-2 text-xs"
+                      >
+                        <div className="flex items-center gap-2 text-[#b0bece]">
+                          <Lightbulb className="h-3.5 w-3.5 shrink-0 text-[#d4f933]" />
+                          <span>{tip.text}</span>
+                        </div>
+                        {tip.action && tip.actionText && (
+                          <button
+                            type="button"
+                            onClick={tip.action}
+                            className="shrink-0 rounded-lg border border-[#d4f933]/40 bg-[#d4f933]/15 px-2 py-1 text-[10px] font-bold text-[#d4f933] transition hover:bg-[#d4f933]/25"
+                          >
+                            {tip.actionText}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Sugestões de Ganchos e Variações Vencedoras */}
+                <div>
+                  <div className="mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#738299]">
+                    <Zap className="h-3 w-3 text-[#d4f933]" />
+                    Ganchos & Exemplos Recomendados para Inserir:
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {copyAnalysis.suggestions.map((sug, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => {
+                          setText((prev) => `${prev.trim()}\n\n${sug.snippet}`);
+                          notify('success', 'Gancho Inserido!', 'O trecho foi anexado ao final da mensagem.');
+                        }}
+                        className="group flex flex-col justify-between rounded-xl border border-[#252f40] bg-[#131824] p-2.5 text-left transition hover:border-[#d4f933]/50 hover:bg-[#182130]"
+                      >
+                        <div>
+                          <span className="text-[11px] font-bold text-[#e1ebf5] group-hover:text-[#d4f933]">
+                            {sug.title}
+                          </span>
+                          <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#8190a6]">
+                            "{sug.snippet}"
+                          </p>
+                        </div>
+                        <span className="mt-2 text-[9px] font-semibold text-[#d4f933] group-hover:underline">
+                          + Inserir no texto
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Seletor de Modo de Mídia: Individual vs Grid / Álbum Telegram */}

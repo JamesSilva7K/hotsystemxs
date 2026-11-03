@@ -92,6 +92,8 @@ export const api = {
         requirePayment: boolean;
         singleUseLink: boolean;
       };
+      operatingMode?: import('@shared/types').BotOperatingMode;
+      funnelStages?: import('@shared/types').BotFunnelStageConfig[];
     }
   ) =>
     request<{ ok: boolean; bot?: AppState['bots'][number] }>(`/api/bots/${id}`, {

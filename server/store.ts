@@ -63,6 +63,8 @@ export interface StoredBot {
   vipChannelTitle?: string | null;
   vipInviteLink?: string | null;
   vipRequirements?: import('../shared/types.js').VipRequirements;
+  operatingMode?: import('../shared/types.js').BotOperatingMode;
+  funnelStages?: import('../shared/types.js').BotFunnelStageConfig[];
 }
 
 interface Database {
@@ -844,6 +846,60 @@ export class Store {
     });
   }
 
+  getDefaultFunnelStages(): import('../shared/types.js').BotFunnelStageConfig[] {
+    return [
+      {
+        id: 'welcome',
+        name: 'Boas-vindas Personalizada (/start)',
+        description: 'Apresentação sedutora da modelo no idioma nativo do bot.',
+        enabled: true,
+        order: 1,
+      },
+      {
+        id: 'age_gate',
+        name: 'Verificação de Idade & Termos (+18)',
+        description: 'Bloqueio obrigatório de maioridade com botões interativos.',
+        enabled: true,
+        order: 2,
+      },
+      {
+        id: 'teaser_sample',
+        name: 'Amostra Sensorial & Provocação (Foto/Áudio Teaser)',
+        description: 'Disponibiliza prévia provocativa para despertar o desejo do lead.',
+        enabled: true,
+        order: 3,
+      },
+      {
+        id: 'plans_checkout',
+        name: 'Apresentação de Planos VIP & Checkout',
+        description: 'Mostra valores em R$ ou USD/EUR com botões de compra direta.',
+        enabled: true,
+        order: 4,
+      },
+      {
+        id: 'payment_validation',
+        name: 'Validação de Pagamento Automática (SyncPay)',
+        description: 'Verificação de PIX ou cartão aprovado antes de liberar acessos.',
+        enabled: true,
+        order: 5,
+      },
+      {
+        id: 'vip_delivery',
+        name: 'Liberação do Canal VIP Anti-Vazamento',
+        description: 'Entrega link de uso único que expira após 1 entrada.',
+        enabled: true,
+        order: 6,
+      },
+      {
+        id: 'followup_recovery',
+        name: 'Recuperação Agressiva de Lead (25% a 40% OFF)',
+        description: 'Dispara ofertas de desconto progressivas caso o lead hesite.',
+        enabled: true,
+        order: 7,
+      },
+    ];
+  }
+
   private toPublicBot(bot: StoredBot): Bot {
     const avatarFile = bot.avatarFile ? path.join(AVATAR_DIR, bot.avatarFile) : '';
     const botChats = this.db.chats.filter((chat) => chat.botId === bot.id);
@@ -884,6 +940,8 @@ export class Store {
         requirePayment: true,
         singleUseLink: true,
       },
+      operatingMode: bot.operatingMode || 'conversational_sales',
+      funnelStages: bot.funnelStages && bot.funnelStages.length > 0 ? bot.funnelStages : this.getDefaultFunnelStages(),
     };
   }
 

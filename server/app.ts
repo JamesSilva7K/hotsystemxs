@@ -394,6 +394,18 @@ app.patch(
           singleUseLink: z.boolean(),
         })
         .optional(),
+      operatingMode: z.enum(['conversational_sales', 'strict_funnel', 'broadcast_only']).optional(),
+      funnelStages: z
+        .array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+            description: z.string(),
+            enabled: z.boolean(),
+            order: z.number(),
+          })
+        )
+        .optional(),
     });
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
@@ -433,6 +445,8 @@ app.patch(
     if (parsed.data.vipChannelTitle !== undefined) updates.vipChannelTitle = parsed.data.vipChannelTitle;
     if (parsed.data.vipInviteLink !== undefined) updates.vipInviteLink = parsed.data.vipInviteLink;
     if (parsed.data.vipRequirements !== undefined) updates.vipRequirements = parsed.data.vipRequirements;
+    if (parsed.data.operatingMode !== undefined) updates.operatingMode = parsed.data.operatingMode;
+    if (parsed.data.funnelStages !== undefined) updates.funnelStages = parsed.data.funnelStages;
 
     store.updateBot(bot.id, updates);
     const updated = store.getPublicState().bots.find((b) => b.id === bot.id);

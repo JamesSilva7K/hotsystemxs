@@ -16,18 +16,22 @@ import {
   Link2,
   Loader2,
   Lock,
+  MessageSquare,
   Plus,
   Radio,
   RefreshCw,
   Send,
   ShieldAlert,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
   Webhook,
   X,
 } from 'lucide-react';
-import type { AppState } from '@shared/types';
+import type { AppState, BotFunnelStageConfig, BotOperatingMode } from '@shared/types';
 import { api } from '../lib/api';
 import { formatFullDate, formatNumber, relativeTime } from '../lib/format';
 import { Avatar } from './Avatar';
@@ -42,6 +46,58 @@ interface BotsProps {
   refresh: () => Promise<void>;
   onNavigate: (tab: NavTab) => void;
 }
+
+const DEFAULT_FUNNEL_STAGES: BotFunnelStageConfig[] = [
+  {
+    id: 'welcome',
+    name: '1. Boas-vindas Personalizada (/start)',
+    description: 'Apresentação sedutora da modelo no idioma nativo do bot.',
+    enabled: true,
+    order: 1,
+  },
+  {
+    id: 'age_gate',
+    name: '2. Verificação de Idade & Termos (+18)',
+    description: 'Bloqueio de segurança com botões interativos.',
+    enabled: true,
+    order: 2,
+  },
+  {
+    id: 'teaser_sample',
+    name: '3. Amostra Sensorial & Provocação (Foto/Áudio Teaser)',
+    description: 'Disponibiliza prévia provocativa para despertar o desejo do lead.',
+    enabled: true,
+    order: 3,
+  },
+  {
+    id: 'plans_checkout',
+    name: '4. Apresentação de Planos VIP & Checkout',
+    description: 'Mostra valores em R$ ou USD/EUR com botões de compra direta.',
+    enabled: true,
+    order: 4,
+  },
+  {
+    id: 'payment_validation',
+    name: '5. Validação de Pagamento Automática (SyncPay)',
+    description: 'Verificação de PIX ou cartão aprovado antes de liberar acessos.',
+    enabled: true,
+    order: 5,
+  },
+  {
+    id: 'vip_delivery',
+    name: '6. Liberação do Canal VIP Anti-Vazamento',
+    description: 'Entrega link de uso único que expira após 1 entrada.',
+    enabled: true,
+    order: 6,
+  },
+  {
+    id: 'followup_recovery',
+    name: '7. Recuperação Agressiva de Lead (25% a 40% OFF)',
+    description: 'Dispara ofertas de desconto progressivas caso o lead hesite.',
+    enabled: true,
+    order: 7,
+  },
+];
 
 export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const { notify } = useToast();
@@ -66,12 +122,18 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
     requirePayment: true,
     singleUseLink: true,
   });
+  const [operatingMode, setOperatingMode] = useState<BotOperatingMode>('conversational_sales');
+  const [funnelStages, setFunnelStages] = useState<BotFunnelStageConfig[]>(DEFAULT_FUNNEL_STAGES);
 
   const openBot = state.bots.find((bot) => bot.id === openBotId) || null;
 
   useEffect(() => {
     if (openBot) {
       setVipChannelInput(openBot.vipChannelId || '');
+      setOperatingMode(openBot.operatingMode || 'conversational_sales');
+      setFunnelStages(
+        openBot.funnelStages && openBot.funnelStages.length > 0 ? openBot.funnelStages : DEFAULT_FUNNEL_STAGES
+      );
       setVipReqs(
         openBot.vipRequirements || {
           requireTerms: true,
@@ -89,7 +151,32 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
           : null
       );
     }
-  }, [openBot?.id, openBot?.vipChannelId, openBot?.vipChannelTitle]);
+  }, [openBot?.id, openBot?.vipChannelId, openBot?.vipChannelTitle, openBot?.operatingMode, openBot?.funnelStages]);
+
+  const handleToggleFunnelStage = async (stageId: string) => {
+    if (!openBot) return;
+    const updated = funnelStages.map((s) => (s.id === stageId ? { ...s, enabled: !s.enabled } : s));
+    setFunnelStages(updated);
+    try {
+      await api.updateBot(openBot.id, { funnelStages: updated });
+      notify('success', 'Etapa Atualizada', 'O funil do bot foi recalculado com sucesso.');
+      await refresh();
+    } catch {
+      setFunnelStages(funnelStages);
+    }
+  };
+
+  const handleChangeOperatingMode = async (mode: BotOperatingMode) => {
+    if (!openBot) return;
+    setOperatingMode(mode);
+    try {
+      await api.updateBot(openBot.id, { operatingMode: mode });
+      notify('success', 'Modo do Bot Atualizado', 'O comportamento do bot foi ajustado.');
+      await refresh();
+    } catch {
+      setOperatingMode(openBot.operatingMode || 'conversational_sales');
+    }
+  };
 
   const handleSaveVipChannel = async () => {
     if (!openBot) return;
@@ -541,6 +628,170 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                     }
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Modo de Operação & Pipeline de Etapas do Bot 🎛️ */}
+            <div className="space-y-4 rounded-2xl border border-[#232d3d] bg-[#10141d] p-4 shadow-md">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1b2330] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                      Modo de Operação & Pipeline do Bot
+                    </h3>
+                    <p className="text-[11px] text-[#718096]">
+                      Escolha como a modelo se comporta no Telegram e selecione as etapas do funil que o bot executará.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-[#d4f933]/30 bg-[#d4f933]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#d4f933]">
+                  {operatingMode === 'conversational_sales'
+                    ? 'Conversacional & Vendas'
+                    : operatingMode === 'strict_funnel'
+                    ? 'Funil Estrito VIP'
+                    : 'Apenas Transmissão'}
+                </span>
+              </div>
+
+              {/* Seletor de Modo de Operação */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da0b6]">
+                  Modo de Operação Ativo:
+                </label>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleChangeOperatingMode('conversational_sales')}
+                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                      operatingMode === 'conversational_sales'
+                        ? 'border-[#d4f933] bg-[#d4f933]/10 text-white shadow-[0_0_15px_rgba(212,249,51,0.15)]'
+                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <MessageSquare className="h-3.5 w-3.5 text-[#d4f933]" />
+                        Conversacional
+                      </div>
+                      <span className="rounded bg-[#d4f933]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#d4f933]">
+                        🔥 Mais Vendas
+                      </span>
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                      A modelo cria conexão íntima, envia amostras e conduz o lead para compra naturalmente.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleChangeOperatingMode('strict_funnel')}
+                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                      operatingMode === 'strict_funnel'
+                        ? 'border-purple-500 bg-purple-500/15 text-white shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+                        Funil Estrito VIP
+                      </div>
+                      <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-bold text-purple-300">
+                        🛡️ Blindado
+                      </span>
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                      Passo a passo rígido: exige maioridade +18 e pagamento antes de liberar qualquer mídia ou acesso.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleChangeOperatingMode('broadcast_only')}
+                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                      operatingMode === 'broadcast_only'
+                        ? 'border-amber-400 bg-amber-400/10 text-white shadow-[0_0_15px_rgba(251,191,36,0.15)]'
+                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <Radio className="h-3.5 w-3.5 text-amber-400" />
+                        Transmissão
+                      </div>
+                      <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                        📢 Disparo
+                      </span>
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                      Não responde chats 1-a-1. Focado puramente em disparos e campanhas em massa nos canais/grupos.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Pipeline de Etapas Interativo */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da0b6]">
+                    Pipeline de Etapas do Lead (Ative ou Desative em 1 Clique):
+                  </label>
+                  <span className="text-[10px] text-[#637286]">
+                    {funnelStages.filter((s) => s.enabled).length} de {funnelStages.length} etapas ativas
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {funnelStages.map((stage) => (
+                    <div
+                      key={stage.id}
+                      onClick={() => void handleToggleFunnelStage(stage.id)}
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-2.5 transition ${
+                        stage.enabled
+                          ? 'border-[#2a374a] bg-[#121824] hover:border-[#d4f933]/40'
+                          : 'border-[#1b222d] bg-[#0a0d13] opacity-60 hover:opacity-90'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-bold ${
+                            stage.enabled ? 'bg-[#d4f933]/20 text-[#d4f933]' : 'bg-[#1a222f] text-[#556379]'
+                          }`}
+                        >
+                          0{stage.order}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${stage.enabled ? 'text-white' : 'text-[#7f8da0]'}`}>
+                              {stage.name}
+                            </span>
+                            <span
+                              className={`rounded px-1.5 py-0.2 text-[9px] font-medium ${
+                                stage.enabled
+                                  ? 'border border-[#d4f933]/30 bg-[#d4f933]/10 text-[#d4f933]'
+                                  : 'border border-[#2a3446] bg-[#171d28] text-[#5e6c80]'
+                              }`}
+                            >
+                              {stage.enabled ? 'Ativa no Bot' : 'Pausada'}
+                            </span>
+                          </div>
+                          <p className="truncate text-[10px] text-[#6d7b8f]">{stage.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        {stage.enabled ? (
+                          <ToggleRight className="h-6 w-6 text-[#d4f933] transition" />
+                        ) : (
+                          <ToggleLeft className="h-6 w-6 text-[#455266] transition" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

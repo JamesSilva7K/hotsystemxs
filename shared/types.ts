@@ -11,6 +11,16 @@ export interface BotCommand {
   description: string;
 }
 
+export type BotOperatingMode = 'conversational_sales' | 'strict_funnel' | 'broadcast_only';
+
+export interface BotFunnelStageConfig {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  order: number;
+}
+
 export interface VipRequirements {
   requireTerms: boolean;
   requirePayment: boolean;
@@ -43,6 +53,8 @@ export interface Bot {
   vipChannelTitle?: string | null;
   vipInviteLink?: string | null;
   vipRequirements?: VipRequirements;
+  operatingMode?: BotOperatingMode;
+  funnelStages?: BotFunnelStageConfig[];
 }
 
 export interface Chat {
