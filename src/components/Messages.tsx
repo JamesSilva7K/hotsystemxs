@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   FileVideo,
   Flame,
+  Globe,
   Image as ImageIcon,
   LayoutGrid,
   Link2,
@@ -27,6 +28,7 @@ import { formatDate, formatNumber, plural, relativeTime, truncate } from '../lib
 import { Avatar } from './Avatar';
 import { TelegramPreview, type InlinePreviewButton } from './TelegramPreview';
 import { useToast } from './Toast';
+import { FlagBrasil, FlagUSA, FlagEspanha, type LanguageCode } from './LanguageSelector';
 
 interface MessagesProps {
   state: AppState;
@@ -50,133 +52,396 @@ interface MessageButton {
   row?: number;
 }
 
-const TEMPLATES = [
-  // --- MODELOS DE RECUPERAÇÃO HOT (30% OFF / 25% OFF / ÁUDIO / BARULHO MOLHADO) ---
-  {
-    name: 'Recuperação: Cerveja no Bar (30% OFF 🍺💦)',
-    category: 'Recuperação Hot 🔥',
-    text: `Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
-    ],
-  },
-  {
-    name: 'Recuperação: Barulho Molhado (25% OFF 👅💦)',
-    category: 'Recuperação Hot 🔥',
-    text: `Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 14.93 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 7.43 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
-    ],
-  },
-  {
-    name: 'Recuperação: Banho Quente & Ensaboada (40% OFF 🚿)',
-    category: 'Recuperação Hot 🔥',
-    text: `Tô entrando no banho agora pensando em você... Vai mesmo ficar só na vontade por causa de poucos reais? Descontinho de 40% só pra você entrar agora e me ver ensaboada no ao vivo: 🚿🧼💦`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 11.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 5.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
-    ],
-  },
-  {
-    name: 'Recuperação: Áudio Proibido na Cama (35% OFF 🍑)',
-    category: 'Recuperação Hot 🔥',
-    text: `Amor, vi que você gerou o seu PIX e não pagou... Eu tô deitada aqui sem calcinha gravando um gemidinho bem manhoso falando o seu nome. Paga nos próximos 5 minutos que você recebe no privado sem censura! 😈🍑`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 12.90 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.40 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
-    ],
-  },
-  {
-    name: 'Recuperação: Último Aviso antes de Fechar ⏳',
-    category: 'Recuperação Hot 🔥',
-    text: `Último aviso amor! O lote promocional vai expirar e as vagas do Melhores Amigos da {nome_bot} vão fechar hoje. Quem entrou já tá gozando todo dia, quem ficou fora só passa vontade. Clica antes que feche:`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: 'VITALICIO + CHAMADA ☎️ por R$ 29.90', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
-    ],
-  },
-  // --- QUEBRA DE OBJEÇÃO & OUTRAS ESTRATÉGIAS ---
-  {
-    name: 'Santinha / Melhores Amigos (Grid Hot 🔥)',
-    category: 'Quebra de Objeção',
-    text: `Na igreja eu sou certinha... mas aqui você vê o lado meu que quase ninguém conhece. 😇🔥\n\nComo falei no Instagram, me converti recentemente e estou mudando muita coisa na minha vida e esse grupo eu vou fechar. ❗️\n\nQuem entrar agora garante acesso ao conteúdo que já tem lá dentro e continua recebendo as próximas fotos e videos exclusivos.\n\nLá no meu Melhores Amigos você encontra:\n\n😈 Meus vídeos mais secretos\n🔥 Meu lado mais provocante, sem pose de santinha\n🎁 Conteúdo exclusivo todos os dias\n📱 Meu WhatsApp pessoal pra conversar e fazer chamada de vídeo\n\n👇 Vem me ver enquanto da tempo!`,
-    buttons: [
-      { id: 1, text: 'MENSAL + 🎁 por R$ 19.94', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 9.94', url: 'https://syncpayments.com.br', color: 'default' as const, row: 1 },
-      { id: 3, text: 'VITALICIO + CHAMADA ☎️ por R$ 39.94', url: 'https://syncpayments.com.br', color: 'default' as const, row: 2 },
-    ],
-    mediaMode: 'grid' as const,
-    mediaGrid: [
-      {
-        id: 'g-1',
-        url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-        type: 'photo' as const,
-        position: 'main-left' as const,
-        order: 0,
-      },
-      {
-        id: 'g-2',
-        url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
-        type: 'photo' as const,
-        position: 'top-right' as const,
-        order: 1,
-      },
-      {
-        id: 'g-3',
-        url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
-        type: 'video' as const,
-        position: 'bottom-right' as const,
-        order: 2,
-      },
-    ],
-  },
-  {
-    name: 'Abordagem & Conquista (Primeiro Contato 😈)',
-    category: 'Abordagem',
-    text: `Oie amorzinho... que bom que você me chamou aqui no Telegram! 🙈\n\nEu sou a {nome_bot}, e preparei esse cantinho bem íntimo e sem censura só pra nós dois.\n\nVocê prefere ver umas fotinhas provocantes agora ou prefere que eu te mande um áudio me apresentando melhor? 😈`,
-    buttons: [
-      { id: 1, text: '🔥 QUERO VER FOTO AGORA', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '🎙️ ME MANDA UM ÁUDIO', url: 'https://t.me', color: 'purple' as const, row: 0 },
-    ],
-  },
-  {
-    name: 'Apresentação de Planos VIP ({nome_bot} 💎)',
-    category: 'Planos & VIP',
-    text: `😈 Se você achou as prévias quentes, você não imagina o que te espera no meu VIP!\n\nLá dentro com a {nome_bot} você tem:\n✨ Mais de 300 vídeos sem censura nem tarjas\n🎥 Chamadas de vídeo individuais toda semana\n💬 Meu WhatsApp pessoal direto comigo\n🔞 Conteúdo novo todos os dias atualizado!\n\nEscolha seu plano e vem comigo agora antes que as vagas encerrem:`,
-    buttons: [
-      { id: 1, text: '💎 VIP MENSAL - R$ 19,90', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '👑 VIP VITALÍCIO + WPP - R$ 39,90', url: 'https://syncpayments.com.br', color: 'purple' as const, row: 1 },
-      { id: 3, text: '🔥 1 DIA DE TESTE - R$ 9,90', url: 'https://syncpayments.com.br', color: 'default' as const, row: 2 },
-    ],
-  },
-  {
-    name: 'Promoção Relâmpago (60% OFF ⚡)',
-    category: 'Promoção',
-    text: `🚨 ATENÇÃO AMOR: Liberamos apenas 5 Vagas com 60% OFF!\n\nA {nome_bot} acabou de abrir um lote promocional que vai durar só pelos próximos 15 minutos.\n\nDe ~~R$ 49,90~~ por APENAS R$ 19,90 com acesso IMEDIATO a todo o meu acervo VIP!\n\nCorre antes que o link expire: 👇`,
-    buttons: [
-      { id: 1, text: '⚡ GARANTIR MINHA VAGA COM 60% OFF', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-    ],
-  },
-  {
-    name: 'Upsell Premiado Nº #75 (Hot 🔥)',
-    category: 'Upsell',
-    text: `😱🔥 Eitaaaa! Sua compra foi PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 vídeos extras meu mais N0VINHAA+18 perdendo a virgindade...\n😈 Spoilers, áudios e vídeos que não posto no grupo\n\n🎁 BÔNUS ESPECIAL:\n✅ Meu WPP pessoal\n✅ Grupo lives, no grupo de live já tem + de 15 lives gravadas 😈\n\n➡️ Só por R$7,90 e acesso vitalício IMEDIATO!`,
-    buttons: [
-      { id: 1, text: '🔥 ADICIONAR AO PEDIDO', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '❌ RECUSAR OFERTA', url: 'https://t.me', color: 'red' as const, row: 0 },
-    ],
-  },
-  {
-    name: 'Cobrança PIX Copia e Cola ⚡',
-    category: 'Cobrança',
-    text: `✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`00020126870014br.gov.bcb.pix2565pix.basspago.com.br/qr/v3/at/8698aa5a-9b67-4dda-b9a4-d3161d3b7d655204000053039865802BR5920SYNC_TECNOLOGIA_LTDA6008BRASILIA62070503***6304373F\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`,
-    buttons: [
-      { id: 1, text: '📋 Copiar Código PIX', url: 'https://t.me', color: 'purple' as const, row: 0 },
-    ],
-  },
-];
+export interface StrategyTemplate {
+  name: string;
+  category: string;
+  text: string;
+  buttons: MessageButton[];
+  mediaMode?: 'single' | 'grid';
+  mediaGrid?: MediaGridItem[];
+}
+
+const TEMPLATES_BY_LANG: Record<LanguageCode, StrategyTemplate[]> = {
+  pt: [
+    // --- MODELOS DE RECUPERAÇÃO HOT (30% OFF / 25% OFF / ÁUDIO / BARULHO MOLHADO) ---
+    {
+      name: 'Recuperação: Cerveja no Bar (30% OFF 🍺💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperação: Barulho Molhado (25% OFF 👅💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 14.93 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 7.43 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperação: Banho Quente & Ensaboada (40% OFF 🚿)',
+      category: 'Recuperação Hot 🔥',
+      text: `Tô entrando no banho agora pensando em você... Vai mesmo ficar só na vontade por causa de poucos reais? Descontinho de 40% só pra você entrar agora e me ver ensaboada no ao vivo: 🚿🧼💦`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 11.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 5.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperação: Áudio Proibido na Cama (35% OFF 🍑)',
+      category: 'Recuperação Hot 🔥',
+      text: `Amor, vi que você gerou o seu PIX e não pagou... Eu tô deitada aqui sem calcinha gravando um gemidinho bem manhoso falando o seu nome. Paga nos próximos 5 minutos que você recebe no privado sem censura! 😈🍑`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 12.90 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.40 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperação: Último Aviso antes de Fechar ⏳',
+      category: 'Recuperação Hot 🔥',
+      text: `Último aviso amor! O lote promocional vai expirar e as vagas do Melhores Amigos da {nome_bot} vão fechar hoje. Quem entrou já tá gozando todo dia, quem ficou fora só passa vontade. Clica antes que feche:`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: 'VITALICIO + CHAMADA ☎️ por R$ 29.90', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    // --- QUEBRA DE OBJEÇÃO & OUTRAS ESTRATÉGIAS ---
+    {
+      name: 'Santinha / Melhores Amigos (Grid Hot 🔥)',
+      category: 'Quebra de Objeção',
+      text: `Na igreja eu sou certinha... mas aqui você vê o lado meu que quase ninguém conhece. 😇🔥\n\nComo falei no Instagram, me converti recentemente e estou mudando muita coisa na minha vida e esse grupo eu vou fechar. ❗️\n\nQuem entrar agora garante acesso ao conteúdo que já tem lá dentro e continua recebendo as próximas fotos e videos exclusivos.\n\nLá no meu Melhores Amigos você encontra:\n\n😈 Meus vídeos mais secretos\n🔥 Meu lado mais provocante, sem pose de santinha\n🎁 Conteúdo exclusivo todos os dias\n📱 Meu WhatsApp pessoal pra conversar e fazer chamada de vídeo\n\n👇 Vem me ver enquanto da tempo!`,
+      buttons: [
+        { id: 1, text: 'MENSAL + 🎁 por R$ 19.94', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 9.94', url: 'https://syncpayments.com.br', color: 'default', row: 1 },
+        { id: 3, text: 'VITALICIO + CHAMADA ☎️ por R$ 39.94', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+      mediaMode: 'grid',
+      mediaGrid: [
+        {
+          id: 'g-1',
+          url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'main-left',
+          order: 0,
+        },
+        {
+          id: 'g-2',
+          url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+          type: 'photo',
+          position: 'top-right',
+          order: 1,
+        },
+        {
+          id: 'g-3',
+          url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
+          type: 'video',
+          position: 'bottom-right',
+          order: 2,
+        },
+      ],
+    },
+    {
+      name: 'Abordagem & Conquista (Primeiro Contato 😈)',
+      category: 'Abordagem',
+      text: `Oie amorzinho... que bom que você me chamou aqui no Telegram! 🙈\n\nEu sou a {nome_bot}, e preparei esse cantinho bem íntimo e sem censura só pra nós dois.\n\nVocê prefere ver umas fotinhas provocantes agora ou prefere que eu te mande um áudio me apresentando melhor? 😈`,
+      buttons: [
+        { id: 1, text: '🔥 QUERO VER FOTO AGORA', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '🎙️ ME MANDA UM ÁUDIO', url: 'https://t.me', color: 'purple', row: 0 },
+      ],
+    },
+    {
+      name: 'Apresentação de Planos VIP ({nome_bot} 💎)',
+      category: 'Planos & VIP',
+      text: `😈 Se você achou as prévias quentes, você não imagina o que te espera no meu VIP!\n\nLá dentro com a {nome_bot} você tem:\n✨ Mais de 300 vídeos sem censura nem tarjas\n🎥 Chamadas de vídeo individuais toda semana\n💬 Meu WhatsApp pessoal direto comigo\n🔞 Conteúdo novo todos os dias atualizado!\n\nEscolha seu plano e vem comigo agora antes que as vagas encerrem:`,
+      buttons: [
+        { id: 1, text: '💎 VIP MENSAL - R$ 19,90', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '👑 VIP VITALÍCIO + WPP - R$ 39,90', url: 'https://syncpayments.com.br', color: 'purple', row: 1 },
+        { id: 3, text: '🔥 1 DIA DE TESTE - R$ 9,90', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+    },
+    {
+      name: 'Promoção Relâmpago (60% OFF ⚡)',
+      category: 'Promoção',
+      text: `🚨 ATENÇÃO AMOR: Liberamos apenas 5 Vagas com 60% OFF!\n\nA {nome_bot} acabou de abrir um lote promocional que vai durar só pelos próximos 15 minutos.\n\nDe ~~R$ 49,90~~ por APENAS R$ 19,90 com acesso IMEDIATO a todo o meu acervo VIP!\n\nCorre antes que o link expire: 👇`,
+      buttons: [
+        { id: 1, text: '⚡ GARANTIR MINHA VAGA COM 60% OFF', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+      ],
+    },
+    {
+      name: 'Upsell Premiado Nº #75 (Hot 🔥)',
+      category: 'Upsell',
+      text: `😱🔥 Eitaaaa! Sua compra foi PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 vídeos extras meu mais N0VINHAA+18 perdendo a virgindade...\n😈 Spoilers, áudios e vídeos que não posto no grupo\n\n🎁 BÔNUS ESPECIAL:\n✅ Meu WPP pessoal\n✅ Grupo lives, no grupo de live já tem + de 15 lives gravadas 😈\n\n➡️ Só por R$7,90 e acesso vitalício IMEDIATO!`,
+      buttons: [
+        { id: 1, text: '🔥 ADICIONAR AO PEDIDO', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '❌ RECUSAR OFERTA', url: 'https://t.me', color: 'red', row: 0 },
+      ],
+    },
+    {
+      name: 'Cobrança PIX Copia e Cola ⚡',
+      category: 'Cobrança',
+      text: `✅ Como realizar o pagamento:\n\n1. Abra o aplicativo do seu banco.\n2. Selecione a opção "Pagar" ou "PIX".\n3. Escolha "PIX Copia e Cola".\n4. Cole a chave que está abaixo e finalize o pagamento com segurança.\n\nCopie o código abaixo:\n\n\`00020126870014br.gov.bcb.pix2565pix.basspago.com.br/qr/v3/at/8698aa5a-9b67-4dda-b9a4-d3161d3b7d655204000053039865802BR5920SYNC_TECNOLOGIA_LTDA6008BRASILIA62070503***6304373F\`\n\nApós efetuar o pagamento, o seu acesso é liberado automaticamente. 🎁`,
+      buttons: [
+        { id: 1, text: '📋 Copiar Código PIX', url: 'https://t.me', color: 'purple', row: 0 },
+      ],
+    },
+  ],
+  en: [
+    // --- ENGLISH RECOVERY & HIGH CONVERSION STRATEGIES ---
+    {
+      name: 'Recovery: Cheaper than a Beer (30% OFF 🍺💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `Afraid of paying too much? 30% OFF = you spend less than a beer at the bar and get my p*ssy rolling its eyes right on your phone screen. 🍺➡️💦`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $4.90 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DAY IN PARADISE 😈 for $2.50 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recovery: Wet Slurp Sound (25% OFF 👅💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `Wanna hear the wet sound? I recorded the sound of my p*ssy being licked deep with his tongue (my finger). 25% OFF and you receive the raw audio and video on your WhatsApp right now...`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $5.50 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DAY IN PARADISE 😈 for $2.90 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recovery: Steamy Hot Shower (40% OFF 🚿)',
+      category: 'Recuperação Hot 🔥',
+      text: `I'm stepping into the shower right now thinking about you... Are you really gonna stay longing over a few bucks? 40% OFF discount unlocked just for you to join now and see me soaped up live: 🚿🧼💦`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $3.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DAY IN PARADISE 😈 for $1.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recovery: Forbidden Bed Audio (35% OFF 🍑)',
+      category: 'Recuperação Hot 🔥',
+      text: `Babe, I noticed you started your checkout but haven't completed... I'm lying naked in bed recording a sultry moan whispering your name. Finish in the next 5 minutes and get it uncut in private! 😈🍑`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $4.50 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DAY IN PARADISE 😈 for $2.20 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recovery: Final Notice before Closing ⏳',
+      category: 'Recuperação Hot 🔥',
+      text: `Final notice babe! The promotional batch is expiring and {nome_bot}'s Best Friends VIP spots close today. Everyone inside is enjoying private treats daily, tap before access locks:`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $4.90 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: 'LIFETIME + CALL ☎️ for $9.90', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Good Girl vs Wild (Grid Hot 🔥)',
+      category: 'Quebra de Objeção',
+      text: `In church I look so innocent... but in here you see the side of me nobody else gets to know. 😇🔥\n\nLike I said on Instagram, I've had huge changes recently and this private VIP vault is closing soon. ❗️\n\nJoin right now to lock lifetime access to everything already posted and all upcoming exclusive videos.\n\nInside my Best Friends you get:\n\n😈 My most secret, unfiltered videos\n🔥 My wild side with zero innocent posing\n🎁 Fresh exclusive clips every day\n📱 My personal private line for video calls\n\n👇 Come unlock before time runs out!`,
+      buttons: [
+        { id: 1, text: 'MONTHLY + 🎁 for $6.90', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DAY IN PARADISE 😈 for $2.90', url: 'https://syncpayments.com.br', color: 'default', row: 1 },
+        { id: 3, text: 'LIFETIME + CALL ☎️ for $12.90', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+      mediaMode: 'grid',
+      mediaGrid: [
+        {
+          id: 'g-en-1',
+          url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'main-left',
+          order: 0,
+        },
+        {
+          id: 'g-en-2',
+          url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+          type: 'photo',
+          position: 'top-right',
+          order: 1,
+        },
+        {
+          id: 'g-en-3',
+          url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
+          type: 'video',
+          position: 'bottom-right',
+          order: 2,
+        },
+      ],
+    },
+    {
+      name: 'Approach & Seduction (First Contact 😈)',
+      category: 'Abordagem',
+      text: `Hey handsome... so glad you reached out to me on Telegram! 🙈\n\nI'm {nome_bot}, and I made this intimate, uncensored corner just for the two of us.\n\nWould you rather see a teasing picture right now or hear a voice note of me introducing myself? 😈`,
+      buttons: [
+        { id: 1, text: '🔥 SHOW ME A TEASE NOW', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '🎙️ SEND ME A VOICE NOTE', url: 'https://t.me', color: 'purple', row: 0 },
+      ],
+    },
+    {
+      name: 'VIP Membership Plans ({nome_bot} 💎)',
+      category: 'Planos & VIP',
+      text: `😈 If you thought the free teasers were hot, you have no idea what's waiting inside my VIP!\n\nInside with {nome_bot} you unlock:\n✨ 300+ full explicit videos with zero blur\n🎥 1-on-1 private video calls every week\n💬 Direct chat on my personal line\n🔞 New fresh updates posted daily!\n\nPick your plan and join me right now before slots close:`,
+      buttons: [
+        { id: 1, text: '💎 VIP MONTHLY - $6.90', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '👑 LIFETIME VIP + CALL - $12.90', url: 'https://syncpayments.com.br', color: 'purple', row: 1 },
+        { id: 3, text: '🔥 1 DAY TRIAL - $2.90', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+    },
+    {
+      name: 'Flash Sale (60% OFF ⚡)',
+      category: 'Promoção',
+      text: `🚨 ATTENTION BABE: Only 5 VIP Spots released at 60% OFF!\n\n{nome_bot} just opened a flash discount batch valid for the next 15 minutes only.\n\nFrom ~~$19.90~~ to JUST $6.90 with INSTANT access to my entire VIP archive!\n\nHurry before the link expires: 👇`,
+      buttons: [
+        { id: 1, text: '⚡ CLAIM MY SPOT WITH 60% OFF', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+      ],
+    },
+    {
+      name: 'Winning Order Upsell #75 (Hot 🔥)',
+      category: 'Upsell',
+      text: `😱🔥 Wowww! Your order just won LUCKY UPSELL #75 🎉🎉🎉\n\n✨ + 265 extra videos of my wildest solo sessions...\n😈 Spoilers, audios and tapes never shared in the public group\n\n🎁 SPECIAL BONUS:\n✅ Direct private WhatsApp\n✅ Private live recordings archive with 15+ uncut lives 😈\n\n➡️ Only $2.90 for INSTANT lifetime access!`,
+      buttons: [
+        { id: 1, text: '🔥 ADD TO MY ORDER', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '❌ DECLINE OFFER', url: 'https://t.me', color: 'red', row: 0 },
+      ],
+    },
+    {
+      name: 'Direct Checkout & Card / Crypto ⚡',
+      category: 'Cobrança',
+      text: `✅ How to complete your private access:\n\n1. Click the secure checkout link below.\n2. Choose Card, Apple Pay or Crypto.\n3. Complete the payment in seconds.\n\nYour secret link and VIP group invite are unlocked automatically right after approval! 🎁`,
+      buttons: [
+        { id: 1, text: '💳 Pay Securely Now (Instant Access)', url: 'https://syncpayments.com.br', color: 'purple', row: 0 },
+      ],
+    },
+  ],
+  es: [
+    // --- ESPAÑOL RECUPERACIÓN & MODELOS DE CONVERSIÓN ---
+    {
+      name: 'Recuperación: Más Barato que Cerveza (30% OFF 🍺💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `¿Tienes miedo de pagar caro? 30% OFF = gastas menos que una cerveza en el bar y te llevas mi c0ñit0 bien mojado en la pantalla de tu celular. 🍺➡️💦`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $4.90 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DÍA EN EL PARAÍSO 😈 por $2.50 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperación: Sonido Mojado (25% OFF 👅💦)',
+      category: 'Recuperação Hot 🔥',
+      text: `¿Quieres escuchar el sonido mojado? Grabé el sonido de mi c0ñit0 siendo lamido bien profundo con su lengua (mi dedo). 25% OFF y recibes el audio y el video en tu WhatsApp ahora mismo...`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $5.50 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DÍA EN EL PARAÍSO 😈 por $2.90 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperación: Ducha Caliente & Enjabonada (40% OFF 🚿)',
+      category: 'Recuperação Hot 🔥',
+      text: `Estoy entrando a la ducha ahora pensando en ti... ¿De verdad te vas a quedar con las ganas por unos pocos pesos? Descuento del 40% exclusivo para que entres ahora y me veas bien enjabonada en vivo: 🚿🧼💦`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $3.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DÍA EN EL PARAÍSO 😈 por $1.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperación: Audio Prohibido en la Cama (35% OFF 🍑)',
+      category: 'Recuperação Hot 🔥',
+      text: `Amor, vi que generaste tu orden pero no terminaste el pago... Estoy acostada aquí sin ropita interior grabando un gemido bien suave diciendo tu nombre. ¡Paga en los próximos 5 minutos y lo recibes sin censura en tu privado! 😈🍑`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $4.50 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DÍA EN EL PARAÍSO 😈 por $2.20 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Recuperación: Último Aviso antes de Cerrar ⏳',
+      category: 'Recuperação Hot 🔥',
+      text: `¡Último aviso amor! El lote promocional está por vencer y las vacantes de Mejores Amigos de {nome_bot} se cierran hoy. Quien entró ya goza todos los días, quien quedó fuera se queda con las ganas. Toca antes de que cierre:`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $4.90 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: 'VITALICIO + LLAMADA ☎️ por $9.90', url: 'https://syncpayments.com.br', color: 'green', row: 1 },
+      ],
+    },
+    {
+      name: 'Niña Buena vs Traviesa (Grid Hot 🔥)',
+      category: 'Quebra de Objeção',
+      text: `En la iglesia soy juiciosa... pero aquí ves el lado mío que casi nadie conoce. 😇🔥\n\nComo conté en Instagram, he tenido muchos cambios últimamente y este grupo lo voy a cerrar pronto. ❗️\n\nQuien entra ahora asegura acceso a todo el contenido que ya está adentro y sigue recibiendo las próximas fotos y videos exclusivos.\n\nEn mi canal de Mejores Amigos encuentras:\n\n😈 Mis videos más secretos sin censura\n🔥 Mi lado más caliente y atrevido\n🎁 Contenido nuevo todos los días\n📱 Mi WhatsApp personal para videollamadas privadas\n\n👇 ¡Ven a verme antes de que se acabe el tiempo!`,
+      buttons: [
+        { id: 1, text: 'MENSUAL + 🎁 por $6.90', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '1 DÍA EN EL PARAÍSO 😈 por $2.90', url: 'https://syncpayments.com.br', color: 'default', row: 1 },
+        { id: 3, text: 'VITALICIO + LLAMADA ☎️ por $12.90', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+      mediaMode: 'grid',
+      mediaGrid: [
+        {
+          id: 'g-es-1',
+          url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          type: 'photo',
+          position: 'main-left',
+          order: 0,
+        },
+        {
+          id: 'g-es-2',
+          url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+          type: 'photo',
+          position: 'top-right',
+          order: 1,
+        },
+        {
+          id: 'g-es-3',
+          url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
+          type: 'video',
+          position: 'bottom-right',
+          order: 2,
+        },
+      ],
+    },
+    {
+      name: 'Abordaje y Seducción (Primer Contacto 😈)',
+      category: 'Abordagem',
+      text: `Hola corazón... ¡qué rico que me hablaste por Telegram! 🙈\n\nSoy {nome_bot}, y armé este rincón bien íntimo y sin censura sólo para los dos.\n\n¿Prefieres que te mande unas fotos provocativas ahora o prefieres que te mande un audio presentándome mejor? 😈`,
+      buttons: [
+        { id: 1, text: '🔥 QUIERO VER FOTO AHORA', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '🎙️ MÁNDAME UN AUDIO', url: 'https://t.me', color: 'purple', row: 0 },
+      ],
+    },
+    {
+      name: 'Presentación de Planes VIP ({nome_bot} 💎)',
+      category: 'Planos & VIP',
+      text: `😈 Si te gustaron las previas calientes, ¡no te imaginas lo que te espera en mi VIP!\n\nAdentro con {nome_bot} tienes:\n✨ Más de 300 videos sin censura ni filtros\n🎥 Videollamadas individuales cada semana\n💬 Mi WhatsApp personal directo conmigo\n🔞 ¡Contenido nuevo actualizado todos los días!\n\nElige tu plan y entra conmigo ahora antes de que se agoten las plazas:`,
+      buttons: [
+        { id: 1, text: '💎 VIP MENSUAL - $6.90', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '👑 VIP VITALICIO + WPP - $12.90', url: 'https://syncpayments.com.br', color: 'purple', row: 1 },
+        { id: 3, text: '🔥 1 DÍA DE PRUEBA - $2.90', url: 'https://syncpayments.com.br', color: 'default', row: 2 },
+      ],
+    },
+    {
+      name: 'Promoción Relámpago (60% OFF ⚡)',
+      category: 'Promoção',
+      text: `🚨 ATENCIÓN AMOR: ¡Liberamos solo 5 cupos con 60% OFF!\n\n{nome_bot} acaba de abrir un lote promocional que dura solo por los próximos 15 minutos.\n\nDe ~~$19.90~~ por SOLO $6.90 con acceso INMEDIATO a todo mi catálogo VIP.\n\nCorre antes de que el enlace expire: 👇`,
+      buttons: [
+        { id: 1, text: '⚡ ASEGURAR MI CUPO CON 60% OFF', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+      ],
+    },
+    {
+      name: 'Upsell Premiado Nº #75 (Hot 🔥)',
+      category: 'Upsell',
+      text: `😱🔥 ¡Uff amor! Tu compra fue PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 videos extras de mis sesiones más calientes...\n😈 Spoilers, audios y videos que no publico en el grupo público\n\n🎁 BONO ESPECIAL:\n✅ Mi WhatsApp personal\n✅ Grupo de transmisiones con más de 15 directos grabados 😈\n\n➡️ ¡Solo por $2.90 y acceso vitalicio INMEDIATO!`,
+      buttons: [
+        { id: 1, text: '🔥 AGREGAR A MI PEDIDO', url: 'https://syncpayments.com.br', color: 'green', row: 0 },
+        { id: 2, text: '❌ RECHAZAR OFERTA', url: 'https://t.me', color: 'red', row: 0 },
+      ],
+    },
+    {
+      name: 'Pago Inmediato con Tarjeta / Transferencia ⚡',
+      category: 'Cobrança',
+      text: `✅ Cómo realizar tu pago seguro:\n\n1. Entra al enlace de pago seguro aquí abajo.\n2. Elige tu método favorito (Tarjeta, Transferencia o Cripto).\n3. Finaliza el pago de forma discreta y 100% segura.\n\n¡Apenas se confirme el pago, tu acceso al VIP se libera automáticamente! 🎁`,
+      buttons: [
+        { id: 1, text: '💳 Pagar de Forma Segura Ahora', url: 'https://syncpayments.com.br', color: 'purple', row: 0 },
+      ],
+    },
+  ],
+};
 
 export function Messages({
   state,
@@ -196,19 +461,32 @@ export function Messages({
   const [audience, setAudience] = useState<Audience>('all');
   const [leadId, setLeadId] = useState('');
   const [chatId, setChatId] = useState('');
-  const [text, setText] = useState(TEMPLATES[0].text);
+  const [templateLang, setTemplateLang] = useState<LanguageCode>(() => {
+    const initBot = state.bots.find((b) => b.id === defaultBotId) || state.bots[0];
+    const l = initBot?.language;
+    return l === 'en' || l === 'es' || l === 'pt' ? l : 'pt';
+  });
+  const [text, setText] = useState(TEMPLATES_BY_LANG.pt[0].text);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'animation' | 'none'>('none');
   const [mediaMode, setMediaMode] = useState<'single' | 'grid'>('single');
   const [mediaGrid, setMediaGrid] = useState<MediaGridItem[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
-  const [buttons, setButtons] = useState<MessageButton[]>(TEMPLATES[0].buttons);
+  const [buttons, setButtons] = useState<MessageButton[]>(TEMPLATES_BY_LANG.pt[0].buttons);
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const bot = state.bots.find((item) => item.id === botId) || state.bots[0] || null;
+
+  // Sincronização inteligente com o idioma de cadastro do Bot
+  useEffect(() => {
+    if (bot?.language && (bot.language === 'pt' || bot.language === 'en' || bot.language === 'es')) {
+      setTemplateLang(bot.language as LanguageCode);
+    }
+  }, [bot?.id, bot?.language]);
+
   const scopedLeads = useMemo(
     () => (bot ? state.leads.filter((lead) => lead.botId === bot.id) : []),
     [state.leads, bot]
@@ -327,7 +605,7 @@ export function Messages({
 
   const getBotDisplayName = () => bot?.firstName || (bot?.username ? `@${bot.username}` : 'Modelo Hot');
 
-  const applyTemplate = (tpl: (typeof TEMPLATES)[number]) => {
+  const applyTemplate = (tpl: StrategyTemplate) => {
     const botName = getBotDisplayName();
     const replacedText = tpl.text.replaceAll('{nome_bot}', botName);
     setText(replacedText);
@@ -469,25 +747,73 @@ export function Messages({
     'Cobrança',
   ];
 
+  const activeTemplates = TEMPLATES_BY_LANG[templateLang] || TEMPLATES_BY_LANG.pt;
   const filteredTemplates =
     selectedCategory === 'Todos'
-      ? TEMPLATES
-      : TEMPLATES.filter((tpl) => tpl.category === selectedCategory);
+      ? activeTemplates
+      : activeTemplates.filter((tpl) => tpl.category === selectedCategory);
+
+  const isLangSyncedWithBot = bot?.language === templateLang;
 
   return (
     <div className="space-y-5 pb-20 md:pb-6">
-      {/* Barra Superior com Seleção de Modelos Rápidos */}
+      {/* Barra Superior com Seleção de Modelos Rápidos & Sincronização Inteligente de Idioma */}
       <div className="space-y-3 rounded-2xl border border-[#2b3548] bg-[#10141d] p-4 shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1f2838] pb-3">
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-[#d4f933]" />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#d4f933]/15 text-[#d4f933]">
+              <Flame className="h-5 w-5" />
+            </div>
             <div>
-              <span className="text-sm font-bold text-white">Estratégias & Modelos de Conversão</span>
-              <p className="text-[10px] text-[#7d8ca4]">Personaliza com o nome da modelo ({getBotDisplayName()}) e carrega mídias + botões oficiais</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">Estratégias & Modelos de Conversão</span>
+                <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  Sincronizado {bot ? `@${bot.username}` : ''}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#7d8ca4]">
+                Modelos de alta conversão adaptados em tempo real com o nome da modelo ({getBotDisplayName()})
+              </p>
             </div>
           </div>
 
-          {/* Abas de Categorias */}
+          {/* Seletor Rápido de Idioma das Cópias com Bandeiras Vetoriais */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-[#242f42] bg-[#0c1017] p-1">
+            <span className="flex items-center gap-1 px-2 text-[10px] font-bold uppercase tracking-wider text-[#697a92]">
+              <Globe className="h-3 w-3" /> Idioma:
+            </span>
+            {([
+              { code: 'pt' as const, label: 'PT', name: 'Português', flag: <FlagBrasil className="h-3 w-4" /> },
+              { code: 'en' as const, label: 'EN', name: 'English', flag: <FlagUSA className="h-3 w-4" /> },
+              { code: 'es' as const, label: 'ES', name: 'Español', flag: <FlagEspanha className="h-3 w-4" /> },
+            ]).map((lang) => {
+              const active = templateLang === lang.code;
+              return (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => {
+                    setTemplateLang(lang.code);
+                    notify('info', `Modelos em ${lang.name}`, `Carregando estratégias no idioma ${lang.label}.`);
+                  }}
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                    active
+                      ? 'bg-[#d4f933] text-black shadow'
+                      : 'text-[#8596ab] hover:bg-[#151c27] hover:text-white'
+                  }`}
+                  title={`Ver modelos em ${lang.name}`}
+                >
+                  {lang.flag}
+                  <span>{lang.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Abas de Categorias de Conversão */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1b2332] pb-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
@@ -504,9 +830,13 @@ export function Messages({
               </button>
             ))}
           </div>
+
+          <div className="text-[11px] text-[#69798f]">
+            {filteredTemplates.length} modelo(s) disponível(is)
+          </div>
         </div>
 
-        {/* Lista de Modelos Filtrados */}
+        {/* Lista de Modelos Filtrados com Visualização Rápida */}
         <div className="flex flex-wrap gap-2 pt-1">
           {filteredTemplates.map((tpl) => (
             <button
@@ -658,7 +988,7 @@ export function Messages({
                       className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#d4f933] hover:bg-[#d4f933]/15"
                       title="Insere o nome da Modelo / Bot atual"
                     >
-                      + Nome da Modelo
+                      {templateLang === 'en' ? '+ Model Name' : templateLang === 'es' ? '+ Nombre Modelo' : '+ Nome da Modelo'}
                     </button>
                     <button
                       type="button"
@@ -666,15 +996,15 @@ export function Messages({
                       className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#6ee7b7] hover:bg-[#6ee7b7]/15"
                       title="Insere link de checkout"
                     >
-                      + Link Checkout
+                      {templateLang === 'en' ? '+ Checkout Link' : templateLang === 'es' ? '+ Enlace de Pago' : '+ Link Checkout'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => insertTag('{chave_pix}')}
+                      onClick={() => insertTag(templateLang === 'pt' ? '{chave_pix}' : '{payment_link}')}
                       className="rounded border border-[#2b3548] bg-[#161c28] px-1.5 py-0.5 text-[10px] font-semibold text-[#c084fc] hover:bg-[#c084fc]/15"
-                      title="Insere chave PIX"
+                      title="Insere código de pagamento"
                     >
-                      + Código PIX
+                      {templateLang === 'en' ? '+ Payment Code' : templateLang === 'es' ? '+ Código de Pago' : '+ Código PIX'}
                     </button>
                   </div>
                 </div>
@@ -1099,8 +1429,12 @@ export function Messages({
               row: b.row,
             }))}
             socialProof={
-              text.includes('PIX') || text.includes('000201')
-                ? '💬 Diego disse: "pqp que gostosa do caralho naquele vídeo com o amigo do ex marido 😈"'
+              text.includes('PIX') || text.includes('000201') || text.includes('Checkout') || text.includes('Pago')
+                ? templateLang === 'en'
+                  ? '💬 Mark said: "damn she is unbelievable in that bedroom tape 😈"'
+                  : templateLang === 'es'
+                  ? '💬 Carlos dijo: "qué rica que estás en ese video privado 😈"'
+                  : '💬 Diego disse: "pqp que gostosa do caralho naquele vídeo com o amigo do ex marido 😈"'
                 : undefined
             }
           />

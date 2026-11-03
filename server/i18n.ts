@@ -216,3 +216,4 @@ export function getLocalizedConversationReply(
     buttons: [{ text: '💎 ENTRAR NO VIP AGORA', url: 'https://syncpayments.com.br' }],
   };
 }
+
