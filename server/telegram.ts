@@ -247,15 +247,58 @@ export async function getUserProfilePhotos(
   }
 }
 
-export async function downloadBotAvatar(token: string, userId: string): Promise<string | null> {
-  const photos = await getUserProfilePhotos(token, userId);
-  const photo = photos[photos.length - 1];
-  if (!photo) return null;
+export async function createChatInviteLink(
+  token: string,
+  chatId: string,
+  options?: {
+    name?: string;
+    expireDate?: number;
+    memberLimit?: number;
+    createsJoinRequest?: boolean;
+  }
+): Promise<{ invite_link: string }> {
+  return callTelegram<{ invite_link: string }>(token, 'createChatInviteLink', {
+    chat_id: chatId,
+    name: options?.name,
+    expire_date: options?.expireDate,
+    member_limit: options?.memberLimit ?? 1,
+    creates_join_request: options?.createsJoinRequest,
+  });
+}
+
+export async function downloadBotAvatar(
+  token: string,
+  userId: string
+): Promise<{ file: string; dataUrl: string } | null> {
   try {
-    const file = await callTelegram<{ file_path: string }>(token, 'getFile', {
-      file_id: photo.file_id,
-    });
+    let fileId: string | null = null;
+
+    // 1. Método Oficial para Bot na Telegram Bot API: getChat(botId)
+    try {
+      const chat = await callTelegram<TelegramChat>(token, 'getChat', { chat_id: userId });
+      if (chat?.photo?.big_file_id || chat?.photo?.small_file_id) {
+        fileId = chat.photo.big_file_id || chat.photo.small_file_id;
+      }
+    } catch {
+      // continua para fallback
+    }
+
+    // 2. Fallback: getUserProfilePhotos
+    if (!fileId) {
+      try {
+        const photos = await getUserProfilePhotos(token, userId);
+        const photo = photos[photos.length - 1];
+        if (photo) fileId = photo.file_id;
+      } catch {
+        // continua
+      }
+    }
+
+    if (!fileId) return null;
+
+    const file = await callTelegram<{ file_path: string }>(token, 'getFile', { file_id: fileId });
     if (!file.file_path) return null;
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
     try {
@@ -266,9 +309,21 @@ export async function downloadBotAvatar(token: string, userId: string): Promise<
       const contentLength = Number(response.headers.get('content-length') || 0);
       if (contentLength > 5 * 1024 * 1024) return null;
       const buffer = Buffer.from(await response.arrayBuffer());
-      const target = path.join(AVATAR_DIR, `${userId}.jpg`);
-      fs.writeFileSync(target, buffer);
-      return `${userId}.jpg`;
+      const base64 = buffer.toString('base64');
+      const mime = file.file_path.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      const dataUrl = `data:${mime};base64,${base64}`;
+
+      const filename = `${userId}.jpg`;
+      try {
+        if (!fs.existsSync(AVATAR_DIR)) {
+          fs.mkdirSync(AVATAR_DIR, { recursive: true });
+        }
+        fs.writeFileSync(path.join(AVATAR_DIR, filename), buffer);
+      } catch {
+        // em ambientes com disco somente leitura (Vercel), a dataUrl já garante visualização 100% real
+      }
+
+      return { file: filename, dataUrl };
     } finally {
       clearTimeout(timeout);
     }

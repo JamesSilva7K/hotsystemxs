@@ -79,12 +79,39 @@ export const api = {
   state: () => request<AppState>('/api/state'),
   connectBot: (token: string, options?: { language?: string; niche?: string }) =>
     post<{ ok: boolean; bot: AppState['bots'][number] }>('/api/bots', { token, ...options }),
-  updateBot: (id: string, data: { language?: string; niche?: string }) =>
+  updateBot: (
+    id: string,
+    data: {
+      language?: string;
+      niche?: string;
+      vipChannelId?: string | null;
+      vipChannelTitle?: string | null;
+      vipInviteLink?: string | null;
+      vipRequirements?: {
+        requireTerms: boolean;
+        requirePayment: boolean;
+        singleUseLink: boolean;
+      };
+    }
+  ) =>
     request<{ ok: boolean; bot?: AppState['bots'][number] }>(`/api/bots/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
       headers: { 'Content-Type': 'application/json' },
     }),
+  validateVipChannel: (id: string, channelId: string) =>
+    post<{
+      ok: boolean;
+      channel: {
+        id: string;
+        title: string;
+        username: string | null;
+        type: string;
+        membersCount: number;
+        isAdmin: boolean;
+        inviteLink: string | null;
+      };
+    }>(`/api/bots/${id}/vip-channel/validate`, { channelId }),
   refreshBot: (id: string) => post<{ ok: boolean; latencyMs: number }>(`/api/bots/${id}/refresh`),
   deleteBot: (id: string) => request<{ ok: boolean }>(`/api/bots/${id}`, { method: 'DELETE' }),
   syncBot: (id: string) =>

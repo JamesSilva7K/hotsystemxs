@@ -10,6 +10,7 @@ import {
 } from './i18n.js';
 import {
   answerCallbackQuery,
+  createChatInviteLink,
   getChatMember,
   getChatMemberCount,
   getUpdates,
@@ -107,6 +108,112 @@ async function notifyAdmin(bot: StoredBot, token: string, lead: Lead): Promise<v
   }
 }
 
+export async function checkAndDeliverVipAccess(
+  bot: StoredBot,
+  token: string,
+  lead: Lead,
+  manualTrigger = false
+): Promise<{ success: boolean; message?: string }> {
+  const reqs = bot.vipRequirements || {
+    requireTerms: true,
+    requirePayment: true,
+    singleUseLink: true,
+  };
+
+  const botLang = normalizeLang(bot.language || lead.languageCode);
+
+  if (!bot.vipChannelId) {
+    if (manualTrigger) {
+      await replyToLead(
+        bot,
+        token,
+        lead,
+        botLang === 'en'
+          ? '⚠️ VIP Channel is currently being configured by the model. Check back in a few minutes!'
+          : botLang === 'es'
+          ? '⚠️ El Canal VIP está siendo preparado por la modelo. ¡Vuelve a consultar en unos minutos!'
+          : '⚠️ O Canal VIP está sendo configurado pela modelo. Tente novamente em alguns instantes!'
+      );
+    }
+    return { success: false, message: 'Canal VIP não configurado.' };
+  }
+
+  // ETAPA 1: Confirmação de Idade (+18) e Termos de Acesso
+  if (reqs.requireTerms && !lead.vipTermsAccepted) {
+    const termsText =
+      botLang === 'en'
+        ? `🔞 *AGE & ACCESS VERIFICATION (+18)*\n\nTo access ${bot.firstName}'s exclusive VIP vault, you must confirm you are at least 18 years old and agree to private rules.`
+        : botLang === 'es'
+        ? `🔞 *VERIFICACIÓN DE EDAD Y TÉRMINOS (+18)*\n\nPara acceder al canal VIP exclusivo de ${bot.firstName}, confirma que tienes 18 años o más y aceptas los términos privados.`
+        : `🔞 *VERIFICAÇÃO DE IDADE & TERMOS (+18)*\n\nPara acessar o Canal VIP exclusivo de ${bot.firstName}, confirme que você tem 18 anos ou mais e aceita as diretrizes de acesso privado.`;
+
+    const termsButtons = [
+      { text: '🔞 SOU MAIOR DE 18 ANOS E ACEITO', callbackData: 'accept_vip_terms' },
+      { text: '❌ RECUSAR', callbackData: 'reject_vip_terms' },
+    ];
+    await replyToLead(bot, token, lead, termsText, termsButtons);
+    return { success: false, message: 'Aguardando termos (+18).' };
+  }
+
+  // ETAPA 2: Pagamento Aprovado (PIX ou Cartão)
+  if (reqs.requirePayment) {
+    const hasApprovedPurchase = store.rawPurchases.some(
+      (p) => (p.leadId === lead.id || (lead.username && p.customerEmail.toLowerCase().includes(lead.username.toLowerCase()))) && p.status === 'pago'
+    );
+    const isClient = lead.status === 'cliente' || hasApprovedPurchase;
+
+    if (!isClient) {
+      const payText =
+        botLang === 'en'
+          ? `🔒 *RESTRICTED VIP ACCESS*\n\nYour payment has not been confirmed yet. Complete your order to unlock your personal one-time invite link to the private channel.`
+          : botLang === 'es'
+          ? `🔒 *ACCESO VIP RESTRINGIDO*\n\nTu pago aún no ha sido confirmado. Completa tu pedido para desbloquear tu enlace de invitación único y personal al canal VIP.`
+          : `🔒 *ACESSO VIP RESTRITO*\n\nIdentificamos que seu pagamento ainda não foi confirmado. Conclua o seu pedido para liberar o link exclusivo de entrada no canal VIP.`;
+
+      const payButtons = [
+        { text: '💳 FINALIZAR PAGAMENTO AGORA', url: 'https://syncpayments.com.br' },
+        { text: '🔄 JÁ PAGUEI, VERIFICAR', callbackData: 'check_vip_access' },
+      ];
+      await replyToLead(bot, token, lead, payText, payButtons);
+      return { success: false, message: 'Pagamento pendente.' };
+    }
+  }
+
+  // ETAPA 3: Todas as etapas validadas! Gera o link seguro (anti-vazamento)
+  let inviteLink = bot.vipInviteLink;
+  if (reqs.singleUseLink && bot.vipChannelId) {
+    try {
+      const linkRes = await createChatInviteLink(token, bot.vipChannelId, {
+        name: `VIP-${lead.telegramUserId}-${Date.now().toString().slice(-4)}`,
+        memberLimit: 1, // Anti-vazamento: expira após 1 entrada!
+      });
+      inviteLink = linkRes.invite_link;
+    } catch {
+      // Se faltar permissão específica no canal, usa o link estático
+      inviteLink = bot.vipInviteLink || 'https://t.me';
+    }
+  }
+
+  store.updateLead(lead.id, {
+    vipUnlocked: true,
+    vipUnlockedAt: new Date().toISOString(),
+  });
+
+  const successText =
+    botLang === 'en'
+      ? `🎉 *CONGRATULATIONS! VIP ACCESS GRANTED!*\n\nAll security and purchase verification steps have been approved. Your unique, one-time invite link is ready below. Tap the button to enter the VIP channel immediately:`
+      : botLang === 'es'
+      ? `🎉 *¡FELICITACIONES! ACCESO VIP CONCEDIDO!*\n\nTodas las etapas de verificación y pago han sido aprobadas con éxito. Tu enlace exclusivo está listo abajo. Toca el botón para entrar:`
+      : `🎉 *PARABÉNS! ACESSO VIP LIBERADO COM SUCESSO!*\n\nTodas as etapas exigidas foram 100% validadas e aprovadas! Seu link único e seguro de entrada está pronto abaixo. Clique no botão para entrar no canal agora:`;
+
+  const successButtons = [
+    { text: '💎 ENTRAR NO CANAL VIP AGORA', url: inviteLink || 'https://t.me' },
+  ];
+
+  await replyToLead(bot, token, lead, successText, successButtons);
+  return { success: true };
+}
+
 async function upsertChatFromUpdate(bot: StoredBot, token: string, message: TelegramMessage): Promise<void> {
   if (message.chat.type === 'private') return;
   const existing = store.rawChats.find(
@@ -183,6 +290,13 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
       });
       if (created) void notifyAdmin(bot, token, lead);
       restartFollowUpForLead(lead.id);
+
+      if (query.data === 'accept_vip_terms') {
+        store.updateLead(lead.id, { vipTermsAccepted: true });
+        void checkAndDeliverVipAccess(bot, token, { ...lead, vipTermsAccepted: true }, true);
+      } else if (query.data === 'check_vip_access' || query.data === 'vip') {
+        void checkAndDeliverVipAccess(bot, token, lead, true);
+      }
     }
     markSeen();
     return;
@@ -276,13 +390,17 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
   const isStart = normalized === '/start' || normalized.startsWith('/start@');
   const isMenu = ['/menu', '/planos', '/planes', '/plans'].includes(normalized) || normalized.startsWith('/menu@');
   const isHelp = ['/ajuda', '/help', '/ayuda', '/suporte', '/support'].includes(normalized) || normalized.startsWith('/ajuda@');
+  const isVip = ['/vip', '/acesso', '/canal', '/access', '/entrar'].includes(normalized) || normalized.startsWith('/vip@');
 
   if (message.chat.type === 'private' && settings.autoReplyEnabled) {
     const existingLead = store.rawLeads.find((item) => item.id === lead.id);
     const alreadyReplied = Boolean(existingLead?.tags.includes('boas-vindas-enviada'));
     const botLang = normalizeLang(bot.language || lead.languageCode);
 
-    if (isStart || (!alreadyReplied && created)) {
+    if (isVip) {
+      // Validação segura por etapas para liberação do Canal VIP
+      await checkAndDeliverVipAccess(bot, token, lead, true);
+    } else if (isStart || (!alreadyReplied && created)) {
       // Mensagem de Boas-Vindas Inteligente no Idioma do Bot
       const localized = getLocalizedWelcome(botLang, lead.name, bot.firstName, bot.username);
       const textToSend = settings.welcomeMessage.trim()

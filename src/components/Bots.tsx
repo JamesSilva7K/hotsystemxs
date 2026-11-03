@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Bot as BotIcon,
@@ -15,10 +15,14 @@ import {
   KeyRound,
   Link2,
   Loader2,
+  Lock,
   Plus,
   Radio,
   RefreshCw,
+  Send,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Trash2,
   Webhook,
   X,
@@ -50,8 +54,93 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [newChatId, setNewChatId] = useState('');
   const [copied, setCopied] = useState(false);
+  const [vipChannelInput, setVipChannelInput] = useState('');
+  const [validatingVip, setValidatingVip] = useState(false);
+  const [vipValidationResult, setVipValidationResult] = useState<{
+    title: string;
+    membersCount: number;
+    isAdmin: boolean;
+  } | null>(null);
+  const [vipReqs, setVipReqs] = useState({
+    requireTerms: true,
+    requirePayment: true,
+    singleUseLink: true,
+  });
 
   const openBot = state.bots.find((bot) => bot.id === openBotId) || null;
+
+  useEffect(() => {
+    if (openBot) {
+      setVipChannelInput(openBot.vipChannelId || '');
+      setVipReqs(
+        openBot.vipRequirements || {
+          requireTerms: true,
+          requirePayment: true,
+          singleUseLink: true,
+        }
+      );
+      setVipValidationResult(
+        openBot.vipChannelId && openBot.vipChannelTitle
+          ? {
+              title: openBot.vipChannelTitle,
+              membersCount: 0,
+              isAdmin: true,
+            }
+          : null
+      );
+    }
+  }, [openBot?.id, openBot?.vipChannelId, openBot?.vipChannelTitle]);
+
+  const handleSaveVipChannel = async () => {
+    if (!openBot) return;
+    setValidatingVip(true);
+    try {
+      if (vipChannelInput.trim()) {
+        const valRes = await api.validateVipChannel(openBot.id, vipChannelInput.trim());
+        setVipValidationResult({
+          title: valRes.channel.title,
+          membersCount: valRes.channel.membersCount,
+          isAdmin: valRes.channel.isAdmin,
+        });
+        await api.updateBot(openBot.id, {
+          vipChannelId: valRes.channel.id,
+          vipChannelTitle: valRes.channel.title,
+          vipRequirements: vipReqs,
+        });
+        notify(
+          'success',
+          'Canal VIP Validado!',
+          `${valRes.channel.title} foi conectado com sucesso e blindado com funil de liberação segura.`
+        );
+      } else {
+        await api.updateBot(openBot.id, {
+          vipChannelId: null,
+          vipChannelTitle: null,
+          vipRequirements: vipReqs,
+        });
+        setVipValidationResult(null);
+        notify('info', 'Canal VIP Removido', 'A liberação automática foi desativada.');
+      }
+      await refresh();
+    } catch (err) {
+      notify('error', 'Falha na validação', err instanceof Error ? err.message : 'Verifique se o bot é administrador do canal.');
+    } finally {
+      setValidatingVip(false);
+    }
+  };
+
+  const handleToggleVipReq = async (key: 'requireTerms' | 'requirePayment' | 'singleUseLink') => {
+    if (!openBot) return;
+    const nextReqs = { ...vipReqs, [key]: !vipReqs[key] };
+    setVipReqs(nextReqs);
+    try {
+      await api.updateBot(openBot.id, { vipRequirements: nextReqs });
+      notify('success', 'Regra Atualizada', 'Critério de liberação do canal VIP atualizado.');
+      await refresh();
+    } catch {
+      setVipReqs(vipReqs);
+    }
+  };
   const webhookBase = state.server.publicBaseUrl || state.settings.publicBaseUrl;
   const botChats = useMemo(
     () => (openBot ? state.chats.filter((chat) => chat.botId === openBot.id) : []),
@@ -289,7 +378,11 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                       @{bot.username}
                       <ExternalLink className="h-2.5 w-2.5" />
                     </a>
-                    <div className="mono mt-0.5 text-[10px] text-[#5f6c81]">ID {bot.id}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[#5f6c81]">
+                      <span className="mono">ID {bot.id}</span>
+                      <span>•</span>
+                      <span className="text-[#8495ac]">Criado {relativeTime(bot.createdAt)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -330,13 +423,29 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                 </div>
                 <div>
                   <div className="text-lg font-bold text-white">{formatNumber(bot.chatsCount)}</div>
-                  <div className="text-[10px] text-[#6b778c]">chats</div>
+                  <div className="text-[10px] text-[#6b778c]">
+                    {(bot.groupsCount || 0) + (bot.channelsCount || 0) > 0
+                      ? `${bot.groupsCount || 0}G · ${bot.channelsCount || 0}C`
+                      : 'chats'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-lg font-bold text-white">{formatNumber(bot.commands.length)}</div>
                   <div className="text-[10px] text-[#6b778c]">comandos</div>
                 </div>
               </div>
+
+              {bot.vipChannelId && (
+                <div className="mt-3 flex items-center justify-between rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-200">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-purple-400" />
+                    <span className="truncate font-semibold">VIP: {bot.vipChannelTitle || bot.vipChannelId}</span>
+                  </div>
+                  <span className="shrink-0 rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-bold text-purple-300">
+                    Funil Seguro 🛡️
+                  </span>
+                </div>
+              )}
 
               {bot.lastError && (
                 <div className="mt-3 flex gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-2.5 text-[10px] leading-relaxed text-amber-200">
@@ -348,7 +457,7 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               <div className="mt-auto flex items-center justify-between pt-4">
                 <div className="text-[10px] text-[#657186]">
                   <Clock className="mr-1 inline h-3 w-3" />
-                  {relativeTime(bot.lastSyncAt)}
+                  {bot.lastSyncAt ? `Sincronizado ${relativeTime(bot.lastSyncAt)}` : 'Sincronizado agora'}
                 </div>
                 <button
                   type="button"
@@ -385,7 +494,7 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#6f7c91]">
                   <span>ID {openBot.id}</span>
                   <span>Conectado em {formatFullDate(openBot.createdAt)}</span>
-                  <span>Última sync {relativeTime(openBot.lastSyncAt)}</span>
+                  <span>Última sync {openBot.lastSyncAt ? relativeTime(openBot.lastSyncAt) : 'Agora mesmo'}</span>
                 </div>
               </div>
               <a
@@ -589,6 +698,154 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Canal de Enviaveis / VIP & Funil de Liberação Segura 🛡️ */}
+            <div className="space-y-3.5 rounded-2xl border border-purple-500/30 bg-[#120f1d] p-4 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                      Canal de Enviaveis / VIP & Funil de Liberação Segura
+                    </h3>
+                    <p className="text-[11px] text-[#9a8ca8]">
+                      O lead só recebe o botão do canal VIP após passar por 100% das etapas configuradas abaixo.
+                    </p>
+                  </div>
+                </div>
+                {openBot.vipChannelId && (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    Ativo e Protegido
+                  </span>
+                )}
+              </div>
+
+              {/* Input para vincular canal VIP */}
+              <div>
+                <label className="text-[11px] font-semibold text-[#b8a8c8]">
+                  ID do Canal VIP no Telegram (-100... ou @canal):
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7f6f8f]" />
+                    <input
+                      value={vipChannelInput}
+                      onChange={(e) => setVipChannelInput(e.target.value)}
+                      placeholder="-100192837482 ou @seucanalvip"
+                      className="input mono pl-9 text-xs border-purple-500/30 bg-[#0c0914] text-white focus:border-purple-400"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveVipChannel}
+                    disabled={validatingVip}
+                    className="btn-primary shrink-0 bg-purple-600 text-white hover:bg-purple-500 border-none text-xs font-bold shadow-md shadow-purple-600/30"
+                  >
+                    {validatingVip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                    Validar & Salvar Canal
+                  </button>
+                </div>
+                {vipValidationResult && (
+                  <div className="mt-2 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <div>
+                        <span className="font-bold">{vipValidationResult.title}</span>
+                        {vipValidationResult.membersCount > 0 && (
+                          <span className="ml-2 text-[10px] text-emerald-300/80">
+                            {formatNumber(vipValidationResult.membersCount)} membros
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      {vipValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Etapas Obrigatórias para Liberação do Acesso */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#9d8dae]">
+                  Etapas Obrigatórias de Validação:
+                </span>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div
+                    onClick={() => handleToggleVipReq('requireTerms')}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                      vipReqs.requireTerms
+                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={vipReqs.requireTerms}
+                      onChange={() => {}}
+                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold">1. Confirmação +18</div>
+                      <p className="text-[10px] text-[#9c8eae]">Exige que o lead aceite termos de maioridade.</p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleToggleVipReq('requirePayment')}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                      vipReqs.requirePayment
+                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={vipReqs.requirePayment}
+                      onChange={() => {}}
+                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold">2. Pagamento Real</div>
+                      <p className="text-[10px] text-[#9c8eae]">Libera somente após PIX ou cartão aprovado.</p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleToggleVipReq('singleUseLink')}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                      vipReqs.singleUseLink
+                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={vipReqs.singleUseLink}
+                      onChange={() => {}}
+                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold">3. Anti-Vazamento</div>
+                      <p className="text-[10px] text-[#9c8eae]">Gera link de uso único (1 membro por link).</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prévia do Botão que o Lead Recebe no Telegram */}
+              <div className="rounded-xl border border-purple-500/20 bg-[#0a0812] p-3">
+                <div className="flex items-center justify-between text-[10px] text-[#8e7e9f] mb-1.5">
+                  <span>Prévia do Botão Seguro no Telegram:</span>
+                  <span className="text-emerald-400 font-bold">● Apenas após cumprir todas as etapas</span>
+                </div>
+                <div className="flex items-center justify-center rounded-xl bg-[#3b7c3d] px-4 py-2.5 text-xs font-bold text-white shadow">
+                  💎 ENTRAR NO CANAL VIP AGORA
+                </div>
+              </div>
             </div>
 
             <div>

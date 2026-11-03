@@ -272,7 +272,7 @@ app.post(
       if (me.is_bot !== true) {
         return res.status(400).json({ error: 'O token informado não pertence a um bot.' });
       }
-      const [description, commands, webhook, avatarFile] = await Promise.all([
+      const [description, commands, webhook, avatarResult] = await Promise.all([
         getMyDescription(token),
         getMyCommands(token),
         getWebhookInfo(token).catch(() => null),
@@ -288,7 +288,8 @@ app.post(
         username: me.username || `bot_${me.id}`,
         firstName: me.first_name || 'Bot Telegram',
         description: description || 'Bot conectado à API oficial do Telegram.',
-        avatarFile,
+        avatarFile: avatarResult?.file || null,
+        avatarDataUrl: avatarResult?.dataUrl || null,
         canJoinGroups: me.can_join_groups ?? true,
         canReadAllGroupMessages: me.can_read_all_group_messages ?? false,
         supportsInlineQueries: me.supports_inline_queries ?? false,
@@ -297,6 +298,7 @@ app.post(
         pendingUpdates: webhook?.pending_update_count || 0,
         language: selectedLang,
         niche: parsed.data.niche,
+        lastSyncAt: new Date().toISOString(),
       });
       const publicBot = store.getPublicState().bots.find((item) => item.id === bot.id);
       return res.status(201).json({ ok: true, bot: publicBot });
@@ -325,7 +327,7 @@ app.post(
     try {
       const started = Date.now();
       const me = await getMe(token);
-      const [description, commands, webhook, avatarFile] = await Promise.all([
+      const [description, commands, webhook, avatarResult] = await Promise.all([
         getMyDescription(token),
         getMyCommands(token),
         getWebhookInfo(token).catch(() => null),
@@ -336,12 +338,14 @@ app.post(
         firstName: me.first_name || bot.firstName,
         description: description || bot.description,
         commands,
-        avatarFile: avatarFile || bot.avatarFile,
+        avatarFile: avatarResult?.file || bot.avatarFile,
+        avatarDataUrl: avatarResult?.dataUrl || bot.avatarDataUrl,
         webhookUrl: webhook?.url || null,
         pendingUpdates: webhook?.pending_update_count || 0,
         canJoinGroups: me.can_join_groups ?? bot.canJoinGroups,
         canReadAllGroupMessages: me.can_read_all_group_messages ?? bot.canReadAllGroupMessages,
         supportsInlineQueries: me.supports_inline_queries ?? bot.supportsInlineQueries,
+        lastSyncAt: new Date().toISOString(),
         status: 'online',
         lastError: null,
       });
@@ -380,25 +384,98 @@ app.patch(
     const updateSchema = z.object({
       language: z.enum(['pt', 'en', 'es']).optional(),
       niche: z.string().trim().max(50).optional(),
+      vipChannelId: z.string().trim().nullable().optional(),
+      vipChannelTitle: z.string().trim().nullable().optional(),
+      vipInviteLink: z.string().trim().nullable().optional(),
+      vipRequirements: z
+        .object({
+          requireTerms: z.boolean(),
+          requirePayment: z.boolean(),
+          singleUseLink: z.boolean(),
+        })
+        .optional(),
     });
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
 
     const updates: Partial<StoredBot> = {};
+    const token = store.getBotToken(bot.id);
+
     if (parsed.data.language) {
       updates.language = parsed.data.language;
-      const token = store.getBotToken(bot.id);
       if (token) {
         const localizedCommands = getLocalizedCommands(parsed.data.language);
         await setMyCommands(token, localizedCommands).catch(() => undefined);
         updates.commands = localizedCommands;
       }
     }
-    if (parsed.data.niche) updates.niche = parsed.data.niche;
+    if (parsed.data.niche !== undefined) updates.niche = parsed.data.niche;
+
+    if (parsed.data.vipChannelId !== undefined) {
+      const channelId = parsed.data.vipChannelId;
+      updates.vipChannelId = channelId;
+      if (channelId && token) {
+        try {
+          const chatInfo = await getChat(token, channelId);
+          updates.vipChannelTitle = chatInfo.title || channelId;
+          if (chatInfo.invite_link) {
+            updates.vipInviteLink = chatInfo.invite_link;
+          }
+        } catch {
+          // Mantém o ID informado
+        }
+      } else if (!channelId) {
+        updates.vipChannelTitle = null;
+        updates.vipInviteLink = null;
+      }
+    }
+
+    if (parsed.data.vipChannelTitle !== undefined) updates.vipChannelTitle = parsed.data.vipChannelTitle;
+    if (parsed.data.vipInviteLink !== undefined) updates.vipInviteLink = parsed.data.vipInviteLink;
+    if (parsed.data.vipRequirements !== undefined) updates.vipRequirements = parsed.data.vipRequirements;
 
     store.updateBot(bot.id, updates);
     const updated = store.getPublicState().bots.find((b) => b.id === bot.id);
     return res.json({ ok: true, bot: updated });
+  })
+);
+
+app.post(
+  '/api/bots/:id/vip-channel/validate',
+  asyncHandler(async (req, res) => {
+    const bot = botOr404(req.params.id, res);
+    if (!bot) return;
+    const token = store.getBotToken(bot.id);
+    if (!token) return res.status(409).json({ error: 'Token ilegível. Reconecte o bot.' });
+
+    const channelId = String(req.body?.channelId || '').trim();
+    if (!channelId) {
+      return res.status(400).json({ error: 'Informe o ID numérico (ex: -100...) ou @username do Canal VIP.' });
+    }
+
+    try {
+      const chat = await getChat(token, channelId);
+      const member = await getChatMember(token, String(chat.id), bot.id).catch(() => null);
+      const membersCount = await getChatMemberCount(token, String(chat.id)).catch(() => 0);
+      const isAdmin = Boolean(member && ['administrator', 'creator'].includes(member.status));
+
+      return res.json({
+        ok: true,
+        channel: {
+          id: String(chat.id),
+          title: chat.title || 'Canal Telegram',
+          username: chat.username || null,
+          type: chat.type,
+          membersCount,
+          isAdmin,
+          inviteLink: chat.invite_link || null,
+        },
+      });
+    } catch (error) {
+      return res.status(400).json({
+        error: `Não foi possível validar o canal: ${normalizeTelegramError(error)}. Certifique-se de que o bot foi adicionado como ADMINISTRADOR do canal.`,
+      });
+    }
   })
 );
 

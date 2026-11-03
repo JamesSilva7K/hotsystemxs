@@ -43,6 +43,7 @@ export interface StoredBot {
   firstName: string;
   description: string;
   avatarFile: string | null;
+  avatarDataUrl?: string | null;
   status: Bot['status'];
   canJoinGroups: boolean;
   canReadAllGroupMessages: boolean;
@@ -58,6 +59,10 @@ export interface StoredBot {
   lastUpdateId: number;
   language?: string;
   niche?: string;
+  vipChannelId?: string | null;
+  vipChannelTitle?: string | null;
+  vipInviteLink?: string | null;
+  vipRequirements?: import('../shared/types.js').VipRequirements;
 }
 
 interface Database {
@@ -411,6 +416,7 @@ export class Store {
     firstName: string;
     description: string;
     avatarFile: string | null;
+    avatarDataUrl?: string | null;
     canJoinGroups: boolean;
     canReadAllGroupMessages: boolean;
     supportsInlineQueries: boolean;
@@ -419,6 +425,7 @@ export class Store {
     pendingUpdates: number;
     language?: string;
     niche?: string;
+    lastSyncAt?: string | null;
   }): StoredBot {
     return this.transaction((db) => {
       const now = new Date().toISOString();
@@ -430,6 +437,7 @@ export class Store {
         firstName: input.firstName,
         description: input.description,
         avatarFile: input.avatarFile,
+        avatarDataUrl: input.avatarDataUrl ?? existing?.avatarDataUrl ?? null,
         status: 'online',
         canJoinGroups: input.canJoinGroups,
         canReadAllGroupMessages: input.canReadAllGroupMessages,
@@ -439,7 +447,7 @@ export class Store {
         pendingUpdates: input.pendingUpdates,
         commands: input.commands,
         createdAt: existing?.createdAt || now,
-        lastSyncAt: existing?.lastSyncAt || null,
+        lastSyncAt: input.lastSyncAt || existing?.lastSyncAt || now,
         lastError: null,
         offset: existing?.offset || 0,
         lastUpdateId: existing?.lastUpdateId || 0,
@@ -614,7 +622,18 @@ export class Store {
   updateLead(
     id: string,
     patch: Partial<
-      Pick<Lead, 'status' | 'notes' | 'tags' | 'avatarUrl' | 'lastOutboundAt' | 'followUp'>
+      Pick<
+        Lead,
+        | 'status'
+        | 'notes'
+        | 'tags'
+        | 'avatarUrl'
+        | 'lastOutboundAt'
+        | 'followUp'
+        | 'vipUnlocked'
+        | 'vipUnlockedAt'
+        | 'vipTermsAccepted'
+      >
     >
   ): Lead | null {
     return this.transaction((db) => {
@@ -630,6 +649,9 @@ export class Store {
       if (patch.avatarUrl) lead.avatarUrl = patch.avatarUrl;
       if (typeof patch.lastOutboundAt === 'string') lead.lastOutboundAt = patch.lastOutboundAt;
       if (patch.followUp !== undefined) lead.followUp = patch.followUp;
+      if (patch.vipUnlocked !== undefined) lead.vipUnlocked = patch.vipUnlocked;
+      if (patch.vipUnlockedAt !== undefined) lead.vipUnlockedAt = patch.vipUnlockedAt;
+      if (patch.vipTermsAccepted !== undefined) lead.vipTermsAccepted = patch.vipTermsAccepted;
       lead.updatedAt = new Date().toISOString();
       return clone(lead);
     });
@@ -824,15 +846,20 @@ export class Store {
 
   private toPublicBot(bot: StoredBot): Bot {
     const avatarFile = bot.avatarFile ? path.join(AVATAR_DIR, bot.avatarFile) : '';
+    const botChats = this.db.chats.filter((chat) => chat.botId === bot.id);
+    const groupsCount = botChats.filter((c) => c.type === 'group' || c.type === 'supergroup').length;
+    const channelsCount = botChats.filter((c) => c.type === 'channel').length;
+
     return {
       id: bot.id,
       username: bot.username,
       firstName: bot.firstName,
       description: bot.description,
       avatarUrl:
-        avatarFile && fs.existsSync(avatarFile)
+        bot.avatarDataUrl ||
+        (avatarFile && fs.existsSync(avatarFile)
           ? `/api/bots/${encodeURIComponent(bot.id)}/avatar`
-          : null,
+          : null),
       status: bot.status,
       canJoinGroups: bot.canJoinGroups,
       canReadAllGroupMessages: bot.canReadAllGroupMessages,
@@ -844,9 +871,19 @@ export class Store {
       lastSyncAt: bot.lastSyncAt,
       lastError: bot.lastError,
       leadsCount: this.db.leads.filter((lead) => lead.botId === bot.id).length,
-      chatsCount: this.db.chats.filter((chat) => chat.botId === bot.id).length,
+      chatsCount: botChats.length,
+      groupsCount,
+      channelsCount,
       language: bot.language || 'pt',
       niche: bot.niche || 'Modelo Hot',
+      vipChannelId: bot.vipChannelId || null,
+      vipChannelTitle: bot.vipChannelTitle || null,
+      vipInviteLink: bot.vipInviteLink || null,
+      vipRequirements: bot.vipRequirements || {
+        requireTerms: true,
+        requirePayment: true,
+        singleUseLink: true,
+      },
     };
   }
 

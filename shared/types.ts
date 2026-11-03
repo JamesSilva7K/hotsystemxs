@@ -11,6 +11,12 @@ export interface BotCommand {
   description: string;
 }
 
+export interface VipRequirements {
+  requireTerms: boolean;
+  requirePayment: boolean;
+  singleUseLink: boolean;
+}
+
 export interface Bot {
   id: string;
   username: string;
@@ -29,8 +35,14 @@ export interface Bot {
   lastError: string | null;
   leadsCount: number;
   chatsCount: number;
+  groupsCount?: number;
+  channelsCount?: number;
   language?: string;
   niche?: string;
+  vipChannelId?: string | null;
+  vipChannelTitle?: string | null;
+  vipInviteLink?: string | null;
+  vipRequirements?: VipRequirements;
 }
 
 export interface Chat {
@@ -80,6 +92,9 @@ export interface Lead {
   followUp: LeadFollowUp | null;
   createdAt: string;
   updatedAt: string;
+  vipUnlocked?: boolean;
+  vipUnlockedAt?: string | null;
+  vipTermsAccepted?: boolean;
 }
 
 export interface MessageLog {
