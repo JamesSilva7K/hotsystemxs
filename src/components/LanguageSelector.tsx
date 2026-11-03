@@ -95,6 +95,7 @@ interface LanguageSelectorProps {
 
 export function LanguageSelector({ value, onChange, className = '' }: LanguageSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selected = LANGUAGES.find((l) => l.code === value) || LANGUAGES[0];
@@ -109,12 +110,21 @@ export function LanguageSelector({ value, onChange, className = '' }: LanguageSe
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const toggleDropdown = () => {
+    if (!open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 180);
+    }
+    setOpen((prev) => !prev);
+  };
+
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative ${open ? 'z-50' : 'z-20'} ${className}`}>
       {/* Botão Gatilho com a Bandeira em Vetor */}
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={toggleDropdown}
         className="flex h-10 w-full items-center justify-between gap-2.5 rounded-xl border border-[#273244] bg-[#121722] px-3 py-2 text-left text-xs font-semibold text-white transition hover:border-[#d4f933]/50 focus:border-[#d4f933] focus:outline-none"
       >
         <div className="flex items-center gap-2.5 overflow-hidden">
@@ -124,12 +134,16 @@ export function LanguageSelector({ value, onChange, className = '' }: LanguageSe
             <span className="text-[10px] text-[#718299]">({selected.nativeName})</span>
           </div>
         </div>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-[#718299] transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[#718299] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Menu Dropdown com Bandeiras Vetoriais */}
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-full min-w-[200px] overflow-hidden rounded-xl border border-[#2a364a] bg-[#0e131d] p-1.5 shadow-2xl backdrop-blur">
+        <div
+          className={`absolute left-0 z-[100] w-full min-w-[220px] rounded-xl border border-[#2e3b50] bg-[#0c1017] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.9)] ring-1 ring-white/10 backdrop-blur-xl ${
+            openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          }`}
+        >
           <div className="space-y-1">
             {LANGUAGES.map((item) => {
               const active = item.code === value;
@@ -164,3 +178,4 @@ export function LanguageSelector({ value, onChange, className = '' }: LanguageSe
     </div>
   );
 }
+

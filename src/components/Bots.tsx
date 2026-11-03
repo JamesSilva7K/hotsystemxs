@@ -164,9 +164,9 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
 
   return (
     <div className="space-y-5 pb-20 md:pb-6">
-      <section className="card overflow-hidden">
+      <section className="card relative z-20">
         <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="p-5 sm:p-7">
+          <div className="p-5 sm:p-7 relative z-20">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#d4f933]">
               <ShieldCheck className="h-4 w-4" />
               Validação oficial
@@ -231,7 +231,7 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               Gere o token enviando <span className="mono text-[#909cb0]">/newbot</span> para o @BotFather no Telegram.
             </p>
           </div>
-          <div className="border-t border-[#222a39] bg-[#0e1118] p-5 lg:border-l lg:border-t-0 sm:p-7">
+          <div className="rounded-b-3xl border-t border-[#222a39] bg-[#0e1118] p-5 lg:rounded-r-3xl lg:rounded-bl-none lg:border-l lg:border-t-0 sm:p-7">
             <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#758297]">Como a captação funciona</div>
             <div className="mt-4 space-y-4">
               {[

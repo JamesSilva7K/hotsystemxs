@@ -575,22 +575,20 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
               <button
                 type="button"
                 onClick={() => setWatermarkType('text')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition ${
-                  watermarkType === 'text'
+                className={`flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition ${watermarkType === 'text'
                     ? 'border border-[#d4f933] bg-[#d4f933]/10 text-[#d4f933]'
                     : 'border border-[#232d3d] bg-[#141923] text-[#8e9cb1]'
-                }`}
+                  }`}
               >
                 <Type className="h-3.5 w-3.5" /> Texto / Nickname
               </button>
               <button
                 type="button"
                 onClick={() => setWatermarkType('image')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition ${
-                  watermarkType === 'image'
+                className={`flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition ${watermarkType === 'image'
                     ? 'border border-[#d4f933] bg-[#d4f933]/10 text-[#d4f933]'
                     : 'border border-[#232d3d] bg-[#141923] text-[#8e9cb1]'
-                }`}
+                  }`}
               >
                 <Sparkles className="h-3.5 w-3.5" /> Logo / Imagem
               </button>
