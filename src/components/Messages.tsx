@@ -51,6 +51,53 @@ interface MessageButton {
 }
 
 const TEMPLATES = [
+  // --- MODELOS DE RECUPERAÇÃO HOT (30% OFF / 25% OFF / ÁUDIO / BARULHO MOLHADO) ---
+  {
+    name: 'Recuperação: Cerveja no Bar (30% OFF 🍺💦)',
+    category: 'Recuperação Hot 🔥',
+    text: `Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
+    ],
+  },
+  {
+    name: 'Recuperação: Barulho Molhado (25% OFF 👅💦)',
+    category: 'Recuperação Hot 🔥',
+    text: `Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 14.93 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 7.43 (25% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
+    ],
+  },
+  {
+    name: 'Recuperação: Banho Quente & Ensaboada (40% OFF 🚿)',
+    category: 'Recuperação Hot 🔥',
+    text: `Tô entrando no banho agora pensando em você... Vai mesmo ficar só na vontade por causa de poucos reais? Descontinho de 40% só pra você entrar agora e me ver ensaboada no ao vivo: 🚿🧼💦`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 11.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 5.90 (40% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
+    ],
+  },
+  {
+    name: 'Recuperação: Áudio Proibido na Cama (35% OFF 🍑)',
+    category: 'Recuperação Hot 🔥',
+    text: `Amor, vi que você gerou o seu PIX e não pagou... Eu tô deitada aqui sem calcinha gravando um gemidinho bem manhoso falando o seu nome. Paga nos próximos 5 minutos que você recebe no privado sem censura! 😈🍑`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 12.90 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 6.40 (35% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
+    ],
+  },
+  {
+    name: 'Recuperação: Último Aviso antes de Fechar ⏳',
+    category: 'Recuperação Hot 🔥',
+    text: `Último aviso amor! O lote promocional vai expirar e as vagas do Melhores Amigos da {nome_bot} vão fechar hoje. Quem entrou já tá gozando todo dia, quem ficou fora só passa vontade. Clica antes que feche:`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 13.93 (30% OFF)', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: 'VITALICIO + CHAMADA ☎️ por R$ 29.90', url: 'https://syncpayments.com.br', color: 'green' as const, row: 1 },
+    ],
+  },
+  // --- QUEBRA DE OBJEÇÃO & OUTRAS ESTRATÉGIAS ---
   {
     name: 'Santinha / Melhores Amigos (Grid Hot 🔥)',
     category: 'Quebra de Objeção',
@@ -113,15 +160,6 @@ const TEMPLATES = [
     ],
   },
   {
-    name: 'Recuperação de Lead Inativo (PIX Pendente 🎁)',
-    category: 'Recuperação',
-    text: `Amor, vi que você gerou o seu PIX mas ainda não finalizou a sua entrada no meu VIP... aconteceu alguma coisa? 🥺\n\nEu separei um presentinho especial pra você: se você pagar nos próximos 10 minutos, eu vou te mandar um vídeo exclusivo de 8 minutos no seu privado que ninguém tem!\n\nClica aqui embaixo para copiar o PIX ou pagar no cartão:`,
-    buttons: [
-      { id: 1, text: '🎁 CONCLUIR MEU ACESSO COM BÔNUS', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
-      { id: 2, text: '💬 FALAR COM SUPORTE', url: 'https://t.me', color: 'default' as const, row: 1 },
-    ],
-  },
-  {
     name: 'Upsell Premiado Nº #75 (Hot 🔥)',
     category: 'Upsell',
     text: `😱🔥 Eitaaaa! Sua compra foi PREMIADA Nº #75 🎉🎉🎉\n\n✨ + 265 vídeos extras meu mais N0VINHAA+18 perdendo a virgindade...\n😈 Spoilers, áudios e vídeos que não posto no grupo\n\n🎁 BÔNUS ESPECIAL:\n✅ Meu WPP pessoal\n✅ Grupo lives, no grupo de live já tem + de 15 lives gravadas 😈\n\n➡️ Só por R$7,90 e acesso vitalício IMEDIATO!`,
@@ -164,6 +202,7 @@ export function Messages({
   const [mediaMode, setMediaMode] = useState<'single' | 'grid'>('single');
   const [mediaGrid, setMediaGrid] = useState<MediaGridItem[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [buttons, setButtons] = useState<MessageButton[]>(TEMPLATES[0].buttons);
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -419,26 +458,72 @@ export function Messages({
   const hasMedia = (mediaMode === 'single' && Boolean(mediaUrl.trim())) || (mediaMode === 'grid' && mediaGrid.length > 0);
   const charLimit = hasMedia ? 1_024 : 4_096;
 
+  const CATEGORIES = [
+    'Todos',
+    'Recuperação Hot 🔥',
+    'Quebra de Objeção',
+    'Abordagem',
+    'Planos & VIP',
+    'Promoção',
+    'Upsell',
+    'Cobrança',
+  ];
+
+  const filteredTemplates =
+    selectedCategory === 'Todos'
+      ? TEMPLATES
+      : TEMPLATES.filter((tpl) => tpl.category === selectedCategory);
+
   return (
     <div className="space-y-5 pb-20 md:pb-6">
       {/* Barra Superior com Seleção de Modelos Rápidos */}
-      <div className="space-y-2.5 rounded-2xl border border-[#2b3548] bg-[#10141d] p-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="space-y-3 rounded-2xl border border-[#2b3548] bg-[#10141d] p-4 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1f2838] pb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#d4f933]" />
-            <span className="text-xs font-bold text-white">Estratégias de Mensagem de Alta Conversão</span>
+            <Flame className="h-5 w-5 text-[#d4f933]" />
+            <div>
+              <span className="text-sm font-bold text-white">Estratégias & Modelos de Conversão</span>
+              <p className="text-[10px] text-[#7d8ca4]">Personaliza com o nome da modelo ({getBotDisplayName()}) e carrega mídias + botões oficiais</p>
+            </div>
           </div>
-          <span className="text-[10px] text-[#7d8ca4]">Personaliza com o nome real do bot ({getBotDisplayName()}) e carrega mídias/botões</span>
+
+          {/* Abas de Categorias */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition ${
+                  selectedCategory === cat
+                    ? 'bg-[#d4f933] text-black shadow-md font-bold'
+                    : 'border border-[#232b3b] bg-[#141924] text-[#8ea0b7] hover:border-[#38465d] hover:text-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {TEMPLATES.map((tpl) => (
+
+        {/* Lista de Modelos Filtrados */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {filteredTemplates.map((tpl) => (
             <button
               key={tpl.name}
               type="button"
               onClick={() => applyTemplate(tpl)}
-              className="flex items-center gap-1.5 rounded-xl border border-[#273244] bg-[#161c28] px-3 py-1.5 text-[11px] font-semibold text-[#ccd6e4] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10 hover:text-[#d4f933]"
+              className="group flex items-center gap-2 rounded-xl border border-[#273244] bg-[#161c28] px-3 py-2 text-xs font-semibold text-[#ccd6e4] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10 hover:text-white"
             >
-              <span className="rounded bg-[#202838] px-1.5 py-0.5 text-[9px] font-bold text-[#8fa0b7]">{tpl.category}</span>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                  tpl.category.includes('Recuperação')
+                    ? 'border border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                    : 'bg-[#202838] text-[#8fa0b7]'
+                }`}
+              >
+                {tpl.category}
+              </span>
               <span>{tpl.name}</span>
             </button>
           ))}

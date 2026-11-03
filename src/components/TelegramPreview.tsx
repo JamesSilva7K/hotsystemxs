@@ -87,8 +87,8 @@ export function TelegramPreview({
 
       {/* Área da Conversa com Papel de Parede Escuro do Telegram */}
       <div className="relative flex-1 space-y-3 bg-[#0e1621] p-3 sm:p-4 pl-10 sm:pl-12">
-        {/* Balão de Mensagem */}
-        <div className="relative w-full rounded-2xl rounded-tl-sm border border-[#242f3d] bg-[#182533] p-3 shadow-md">
+        {/* Contêiner da Mensagem Completa com Avatar Alinhado na Base */}
+        <div className="relative w-full space-y-1.5">
           {/* Avatar no Canto Inferior Esquerdo (Idêntico ao Telegram Oficial) */}
           <div className="absolute -left-9 bottom-0 h-7 w-7 overflow-hidden rounded-full border border-[#242f3d] bg-[#1d2733] shadow">
             {botAvatar ? (
@@ -99,174 +99,171 @@ export function TelegramPreview({
               </div>
             )}
           </div>
-          {/* Álbum / Grid de Mídias (Estilo Telegram com Múltiplas Posições) */}
-          {mediaGrid && mediaGrid.length >= 2 ? (
-            <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
-              {mediaGrid.length === 3 ? (
-                /* Grid 3 Itens idêntico à imagem do usuário! (Esquerda 58% vertical, Direita 42% com 2 itens) */
-                <div className="grid grid-cols-[1.35fr_1fr] gap-[2px] bg-[#0c1219]">
-                  {/* Item 1 (Esquerda Principal / Alto) */}
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/60">
-                    {mediaGrid[0].type === 'video' ? (
-                      <video src={mediaGrid[0].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
-                    ) : (
-                      <img src={mediaGrid[0].url} alt="Foto 1" className="h-full w-full object-cover" />
-                    )}
-                  </div>
 
-                  {/* Coluna Direita (2 Itens Empilhados) */}
-                  <div className="grid grid-rows-2 gap-[2px]">
-                    {/* Item 2 (Superior Direito) */}
-                    <div className="relative h-full w-full overflow-hidden bg-black/60">
-                      {mediaGrid[1].type === 'video' ? (
-                        <video src={mediaGrid[1].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
-                      ) : (
-                        <img src={mediaGrid[1].url} alt="Foto 2" className="h-full w-full object-cover" />
-                      )}
-                    </div>
-
-                    {/* Item 3 (Inferior Direito com Play de Vídeo) */}
-                    <div className="relative h-full w-full overflow-hidden bg-black/60">
-                      {mediaGrid[2].type === 'video' ? (
-                        <>
-                          <video src={mediaGrid[2].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur">
-                              <Play className="h-4 w-4 fill-white text-white" />
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <img src={mediaGrid[2].url} alt="Mídia 3" className="h-full w-full object-cover" />
-                      )}
-                      <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1 py-0.5 text-[9px] font-mono font-medium text-white/90">
-                        23:48
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : mediaGrid.length === 2 ? (
-                /* Grid 2 Itens lado a lado */
-                <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
-                  {mediaGrid.slice(0, 2).map((item, i) => (
-                    <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
-                      {item.type === 'video' ? (
-                        <>
-                          <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-                            <Play className="h-6 w-6 fill-white text-white" />
-                          </div>
-                        </>
-                      ) : (
-                        <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Grid 4 Itens (2x2) */
-                <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
-                  {mediaGrid.slice(0, 4).map((item, i) => (
-                    <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
-                      {item.type === 'video' ? (
-                        <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
-                      ) : (
-                        <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Mídia Individual (Foto / Vídeo / GIF) */
-            mediaUrl && mediaType !== 'none' && (
+          {/* Balão de Mensagem */}
+          <div className="relative w-full rounded-2xl rounded-tl-sm border border-[#242f3d] bg-[#182533] p-3 shadow-md">
+            {/* Álbum / Grid de Mídias (Estilo Telegram com Múltiplas Posições) */}
+            {mediaGrid && mediaGrid.length >= 2 ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                {mediaType === 'video' ? (
-                  <div className="relative aspect-video w-full bg-black/60">
-                    <video src={mediaUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline controls />
+                {mediaGrid.length === 3 ? (
+                  /* Grid 3 Itens idêntico à imagem do usuário! (Esquerda 58% vertical, Direita 42% com 2 itens) */
+                  <div className="grid grid-cols-[1.35fr_1fr] gap-[2px] bg-[#0c1219]">
+                    {/* Item 1 (Esquerda Principal / Alto) */}
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/60">
+                      {mediaGrid[0].type === 'video' ? (
+                        <video src={mediaGrid[0].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                      ) : (
+                        <img src={mediaGrid[0].url} alt="Foto 1" className="h-full w-full object-cover" />
+                      )}
+                    </div>
+
+                    {/* Coluna Direita (2 Itens Empilhados) */}
+                    <div className="grid grid-rows-2 gap-[2px]">
+                      {/* Item 2 (Superior Direito) */}
+                      <div className="relative h-full w-full overflow-hidden bg-black/60">
+                        {mediaGrid[1].type === 'video' ? (
+                          <video src={mediaGrid[1].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                        ) : (
+                          <img src={mediaGrid[1].url} alt="Foto 2" className="h-full w-full object-cover" />
+                        )}
+                      </div>
+
+                      {/* Item 3 (Inferior Direito com Play de Vídeo) */}
+                      <div className="relative h-full w-full overflow-hidden bg-black/60">
+                        {mediaGrid[2].type === 'video' ? (
+                          <>
+                            <video src={mediaGrid[2].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur">
+                                <Play className="h-4 w-4 fill-white text-white" />
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <img src={mediaGrid[2].url} alt="Mídia 3" className="h-full w-full object-cover" />
+                        )}
+                        <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1 py-0.5 text-[9px] font-mono font-medium text-white/90">
+                          23:48
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                ) : mediaType === 'animation' ? (
-                  <div className="relative aspect-video w-full">
-                    <img src={mediaUrl} alt="GIF" className="h-full w-full object-cover" />
-                    <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur">
-                      GIF
-                    </span>
+                ) : mediaGrid.length === 2 ? (
+                  /* Grid 2 Itens lado a lado */
+                  <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
+                    {mediaGrid.slice(0, 2).map((item, i) => (
+                      <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
+                        {item.type === 'video' ? (
+                          <>
+                            <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                              <Play className="h-6 w-6 fill-white text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="aspect-video w-full">
-                    <img src={mediaUrl} alt="Foto" className="h-full w-full object-cover" />
+                  /* Grid 4 Itens (2x2) */
+                  <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
+                    {mediaGrid.slice(0, 4).map((item, i) => (
+                      <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
+                        {item.type === 'video' ? (
+                          <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                        ) : (
+                          <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            )
-          )}
-
-          {/* Texto Formatado da Mensagem */}
-          <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#f0f2f5]">
-            {text.split('\n').map((line, idx) => {
-              // Destaque para bloco de código Copia e Cola
-              if (line.startsWith('```') || line.endsWith('```')) {
-                return null;
-              }
-              if (cleanCode && line.includes(cleanCode)) {
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      navigator.clipboard.writeText(cleanCode);
-                      setCopiedCode(true);
-                      setTimeout(() => setCopiedCode(false), 2000);
-                    }}
-                    className="my-2 cursor-pointer rounded-xl border border-[#3b4759] bg-[#101923] p-2.5 font-mono text-[11px] text-[#86c5da] transition hover:border-[#5288c1]"
-                    title="Clique para copiar"
-                  >
-                    <div className="mb-1 flex items-center justify-between text-[10px] text-[#6f8298]">
-                      <span>PIX Copia e Cola</span>
-                      <span className="flex items-center gap-1 text-[#5288c1]">
-                        {copiedCode ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                        {copiedCode ? 'Copiado!' : 'Copiar'}
+            ) : (
+              /* Mídia Individual (Foto / Vídeo / GIF) */
+              mediaUrl && mediaType !== 'none' && (
+                <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                  {mediaType === 'video' ? (
+                    <div className="relative aspect-video w-full bg-black/60">
+                      <video src={mediaUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline controls />
+                    </div>
+                  ) : mediaType === 'animation' ? (
+                    <div className="relative aspect-video w-full">
+                      <img src={mediaUrl} alt="GIF" className="h-full w-full object-cover" />
+                      <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur">
+                        GIF
                       </span>
                     </div>
-                    <div className="break-all">{cleanCode}</div>
-                  </div>
+                  ) : (
+                    <div className="aspect-video w-full">
+                      <img src={mediaUrl} alt="Foto" className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+
+            {/* Texto Formatado da Mensagem */}
+            <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#f0f2f5]">
+              {text.split('\n').map((line, idx) => {
+                // Destaque para bloco de código Copia e Cola
+                if (line.startsWith('```') || line.endsWith('```')) {
+                  return null;
+                }
+                if (cleanCode && line.includes(cleanCode)) {
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        navigator.clipboard.writeText(cleanCode);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="my-2 cursor-pointer rounded-xl border border-[#3b4759] bg-[#101923] p-2.5 font-mono text-[11px] text-[#86c5da] transition hover:border-[#5288c1]"
+                      title="Clique para copiar"
+                    >
+                      <div className="mb-1 flex items-center justify-between text-[10px] text-[#6f8298]">
+                        <span>PIX Copia e Cola</span>
+                        <span className="flex items-center gap-1 text-[#5288c1]">
+                          {copiedCode ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                          {copiedCode ? 'Copiado!' : 'Copiar'}
+                        </span>
+                      </div>
+                      <div className="break-all">{cleanCode}</div>
+                    </div>
+                  );
+                }
+                return (
+                  <span key={idx}>
+                    {line}
+                    {idx < text.split('\n').length - 1 && <br />}
+                  </span>
                 );
-              }
-              return (
-                <span key={idx}>
-                  {line}
-                  {idx < text.split('\n').length - 1 && <br />}
-                </span>
-              );
-            })}
+              })}
+            </div>
+
+            {/* Rodapé com Hora e Status de Entrega */}
+            <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#788a9c]">
+              <span>08:58</span>
+              <CheckCheck className="h-3.5 w-3.5 text-[#539fd6]" />
+            </div>
           </div>
 
-          {/* Rodapé com Hora e Status de Entrega */}
-          <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-[#788a9c]">
-            <span>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-            <CheckCheck className="h-3.5 w-3.5 text-[#539fd6]" />
-          </div>
-
-          {/* Botões Inline Interativos */}
+          {/* Botões Inline Interativos (Posicionados abaixo do balão, idêntico ao Telegram) */}
           {buttonRows.length > 0 && (
-            <div className="mt-3 space-y-1.5 pt-1">
+            <div className="space-y-1">
               {buttonRows.map((row, rIdx) => (
-                <div key={rIdx} className="flex gap-1.5">
+                <div key={rIdx} className="flex gap-1">
                   {row.map((btn, bIdx) => {
                     const colorClass = BUTTON_COLORS[btn.color || 'default'];
                     return (
                       <button
                         key={bIdx}
                         type="button"
-                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-semibold shadow-sm transition active:scale-[0.98] ${colorClass}`}
+                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-center text-[12.5px] font-semibold shadow-sm transition active:scale-[0.98] ${colorClass}`}
                       >
-                        {btn.text.includes('ADICIONAR') || btn.text.includes('🔥') ? (
-                          <Flame className="h-3.5 w-3.5 fill-current" />
-                        ) : btn.text.includes('RECUSAR') || btn.text.includes('❌') ? (
-                          <X className="h-3.5 w-3.5" />
-                        ) : btn.text.includes('Copiar') || btn.text.includes('📋') ? (
-                          <Copy className="h-3.5 w-3.5" />
-                        ) : null}
                         <span className="truncate">{btn.text}</span>
                       </button>
                     );
