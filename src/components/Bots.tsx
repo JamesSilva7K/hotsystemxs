@@ -30,7 +30,7 @@ import { Avatar } from './Avatar';
 import { Modal } from './Modal';
 import { Dot } from './StatusBadge';
 import { useToast } from './Toast';
-import { LanguageSelector } from './LanguageSelector';
+import { FlagBrasil, FlagEspanha, FlagUSA, LanguageSelector, type LanguageCode } from './LanguageSelector';
 import type { NavTab } from '../lib/nav';
 
 interface BotsProps {
@@ -292,16 +292,31 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                     <div className="mono mt-0.5 text-[10px] text-[#5f6c81]">ID {bot.id}</div>
                   </div>
                 </div>
-                <span
-                  className={`badge shrink-0 ${
-                    bot.webhookUrl
-                      ? 'border-sky-400/20 bg-sky-400/10 text-sky-300'
-                      : 'border-[#2b3447] bg-[#171c26] text-[#95a1b5]'
-                  }`}
-                >
-                  {bot.webhookUrl ? <Webhook className="h-3 w-3" /> : <Radio className="h-3 w-3" />}
-                  {bot.webhookUrl ? 'Webhook' : 'Polling'}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span
+                    className="flex items-center gap-1 rounded-md border border-[#2b3447] bg-[#0c1017] px-1.5 py-1 text-[10px] font-bold text-[#b4c3d8]"
+                    title={`Idioma: ${bot.language === 'en' ? 'Inglês (EUA)' : bot.language === 'es' ? 'Espanhol' : 'Português (Brasil)'}`}
+                  >
+                    {bot.language === 'en' ? (
+                      <FlagUSA className="h-3 w-4" />
+                    ) : bot.language === 'es' ? (
+                      <FlagEspanha className="h-3 w-4" />
+                    ) : (
+                      <FlagBrasil className="h-3 w-4" />
+                    )}
+                    <span className="uppercase">{bot.language || 'pt'}</span>
+                  </span>
+                  <span
+                    className={`badge ${
+                      bot.webhookUrl
+                        ? 'border-sky-400/20 bg-sky-400/10 text-sky-300'
+                        : 'border-[#2b3447] bg-[#171c26] text-[#95a1b5]'
+                    }`}
+                  >
+                    {bot.webhookUrl ? <Webhook className="h-3 w-3" /> : <Radio className="h-3 w-3" />}
+                    {bot.webhookUrl ? 'Webhook' : 'Polling'}
+                  </span>
+                </div>
               </div>
 
               <p className="mt-4 line-clamp-2 min-h-[32px] text-xs leading-relaxed text-[#8490a4]">
@@ -389,6 +404,36 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                 <span>{openBot.lastError}</span>
               </div>
             )}
+
+            {/* Configuração de Idioma e Nicho do Bot Ativo */}
+            <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#8da0b6]">
+                Idioma de Atendimento & Comunicação da Modelo
+              </label>
+              <p className="mt-0.5 text-xs text-[#718096]">
+                A modelo responderá leads automaticamente neste idioma em todas as boas-vindas, comandos (/start, /menu, /ajuda) e conversas.
+              </p>
+              <div className="mt-2.5 max-w-xs">
+                <LanguageSelector
+                  value={(openBot.language as LanguageCode) || 'pt'}
+                  onChange={async (newLang) => {
+                    try {
+                      await api.updateBot(openBot.id, { language: newLang });
+                      notify(
+                        'success',
+                        'Idioma Atualizado!',
+                        `A modelo agora se comunica em ${
+                          newLang === 'en' ? 'Inglês (EUA)' : newLang === 'es' ? 'Espanhol' : 'Português (Brasil)'
+                        }.`
+                      );
+                      await refresh();
+                    } catch (err) {
+                      notify('error', 'Falha ao alterar idioma', err instanceof Error ? err.message : 'Tente novamente.');
+                    }
+                  }}
+                />
+              </div>
+            </div>
 
             <div>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">Ações do bot</h3>

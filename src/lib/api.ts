@@ -79,6 +79,12 @@ export const api = {
   state: () => request<AppState>('/api/state'),
   connectBot: (token: string, options?: { language?: string; niche?: string }) =>
     post<{ ok: boolean; bot: AppState['bots'][number] }>('/api/bots', { token, ...options }),
+  updateBot: (id: string, data: { language?: string; niche?: string }) =>
+    request<{ ok: boolean; bot?: AppState['bots'][number] }>(`/api/bots/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+    }),
   refreshBot: (id: string) => post<{ ok: boolean; latencyMs: number }>(`/api/bots/${id}/refresh`),
   deleteBot: (id: string) => request<{ ok: boolean }>(`/api/bots/${id}`, { method: 'DELETE' }),
   syncBot: (id: string) =>

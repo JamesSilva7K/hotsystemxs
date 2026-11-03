@@ -2,6 +2,13 @@ import type { Lead, MessageLog } from '../shared/types.js';
 import { restartFollowUpForLead } from './followups.js';
 import { newId, store, type StoredBot } from './store.js';
 import {
+  getLocalizedConversationReply,
+  getLocalizedHelp,
+  getLocalizedMenu,
+  getLocalizedWelcome,
+  normalizeLang,
+} from './i18n.js';
+import {
   answerCallbackQuery,
   getChatMember,
   getChatMemberCount,
@@ -64,9 +71,15 @@ function logOutbound(
   store.addMessage(message);
 }
 
-async function replyToLead(bot: StoredBot, token: string, lead: Lead, text: string): Promise<boolean> {
+async function replyToLead(
+  bot: StoredBot,
+  token: string,
+  lead: Lead,
+  text: string,
+  buttons?: Array<{ text: string; url?: string; callbackData?: string }>
+): Promise<boolean> {
   try {
-    const result = await sendText(token, lead.telegramUserId, text);
+    const result = await sendText(token, lead.telegramUserId, text, buttons);
     logOutbound(bot.id, lead.telegramUserId, lead.id, text, 'enviado', String(result.message_id), null);
     return true;
   } catch (error) {
@@ -261,21 +274,38 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
   const settings = store.settings;
   const normalized = text.trim().toLowerCase().split(/\s+/)[0] || '';
   const isStart = normalized === '/start' || normalized.startsWith('/start@');
-  const isHelp = ['/ajuda', '/help', '/menu'].includes(normalized);
+  const isMenu = ['/menu', '/planos', '/planes', '/plans'].includes(normalized) || normalized.startsWith('/menu@');
+  const isHelp = ['/ajuda', '/help', '/ayuda', '/suporte', '/support'].includes(normalized) || normalized.startsWith('/ajuda@');
 
   if (message.chat.type === 'private' && settings.autoReplyEnabled) {
     const existingLead = store.rawLeads.find((item) => item.id === lead.id);
     const alreadyReplied = Boolean(existingLead?.tags.includes('boas-vindas-enviada'));
-    if (isStart || isHelp || (!alreadyReplied && created)) {
-      const welcome =
-        settings.welcomeMessage.trim() ||
-        'Olá, {nome}! Recebemos sua mensagem e já vamos te atender por aqui.';
-      const sent = await replyToLead(bot, token, lead, renderWelcome(welcome, lead, bot));
+    const botLang = normalizeLang(bot.language || lead.languageCode);
+
+    if (isStart || (!alreadyReplied && created)) {
+      // Mensagem de Boas-Vindas Inteligente no Idioma do Bot
+      const localized = getLocalizedWelcome(botLang, lead.name, bot.firstName, bot.username);
+      const textToSend = settings.welcomeMessage.trim()
+        ? renderWelcome(settings.welcomeMessage, lead, bot)
+        : localized.text;
+      const sent = await replyToLead(bot, token, lead, textToSend, localized.buttons);
       if (sent) {
         store.updateLead(lead.id, {
           tags: Array.from(new Set([...(existingLead?.tags || []), 'boas-vindas-enviada'])),
         });
       }
+    } else if (isMenu) {
+      // Apresentação de Planos e Conteúdos VIP
+      const menuMsg = getLocalizedMenu(botLang, lead.name, bot.firstName);
+      await replyToLead(bot, token, lead, menuMsg.text, menuMsg.buttons);
+    } else if (isHelp) {
+      // Suporte e Ajuda
+      const helpMsg = getLocalizedHelp(botLang, lead.name, bot.firstName);
+      await replyToLead(bot, token, lead, helpMsg.text, helpMsg.buttons);
+    } else if (existingLead && !text.startsWith('/')) {
+      // Conversação e engajamento dinâmico no idioma da modelo
+      const replyMsg = getLocalizedConversationReply(botLang, lead.name, bot.firstName);
+      await replyToLead(bot, token, lead, replyMsg.text, replyMsg.buttons);
     }
   }
 

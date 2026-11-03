@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BotCommand } from '../shared/types.js';
+export type { BotCommand };
 import { AVATAR_DIR } from './config.js';
 
 const API_ROOT = 'https://api.telegram.org';

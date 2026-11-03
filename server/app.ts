@@ -23,7 +23,7 @@ import {
   safeEqual,
   verifySession,
 } from './security.js';
-import { newId, store } from './store.js';
+import { newId, store, type StoredBot } from './store.js';
 import {
   deleteWebhook,
   downloadBotAvatar,
@@ -40,6 +40,7 @@ import {
   setWebhook,
 } from './telegram.js';
 import { broadcastToAudience, deliverMessage, executeCampaign } from './messaging.js';
+import { getLocalizedCommands, normalizeLang } from './i18n.js';
 import { registerAdminRoutes, registerPublicRoutes } from './routes.js';
 import { processTelegramUpdate, syncAllBots, syncBotUpdates } from './updates.js';
 
@@ -277,6 +278,10 @@ app.post(
         getWebhookInfo(token).catch(() => null),
         downloadBotAvatar(token, String(me.id)),
       ]);
+      const selectedLang = normalizeLang(parsed.data.language);
+      const localizedCommands = getLocalizedCommands(selectedLang);
+      await setMyCommands(token, localizedCommands).catch(() => undefined);
+
       const bot = store.upsertBot({
         id: String(me.id),
         token,
@@ -287,10 +292,10 @@ app.post(
         canJoinGroups: me.can_join_groups ?? true,
         canReadAllGroupMessages: me.can_read_all_group_messages ?? false,
         supportsInlineQueries: me.supports_inline_queries ?? false,
-        commands,
+        commands: localizedCommands.length > 0 ? localizedCommands : commands,
         webhookUrl: webhook?.url || null,
         pendingUpdates: webhook?.pending_update_count || 0,
-        language: parsed.data.language,
+        language: selectedLang,
         niche: parsed.data.niche,
       });
       const publicBot = store.getPublicState().bots.find((item) => item.id === bot.id);
@@ -364,6 +369,36 @@ app.delete(
     }
     store.removeBot(bot.id);
     return res.json({ ok: true });
+  })
+);
+
+app.patch(
+  '/api/bots/:id',
+  asyncHandler(async (req, res) => {
+    const bot = botOr404(req.params.id, res);
+    if (!bot) return;
+    const updateSchema = z.object({
+      language: z.enum(['pt', 'en', 'es']).optional(),
+      niche: z.string().trim().max(50).optional(),
+    });
+    const parsed = updateSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
+
+    const updates: Partial<StoredBot> = {};
+    if (parsed.data.language) {
+      updates.language = parsed.data.language;
+      const token = store.getBotToken(bot.id);
+      if (token) {
+        const localizedCommands = getLocalizedCommands(parsed.data.language);
+        await setMyCommands(token, localizedCommands).catch(() => undefined);
+        updates.commands = localizedCommands;
+      }
+    }
+    if (parsed.data.niche) updates.niche = parsed.data.niche;
+
+    store.updateBot(bot.id, updates);
+    const updated = store.getPublicState().bots.find((b) => b.id === bot.id);
+    return res.json({ ok: true, bot: updated });
   })
 );
 
@@ -465,11 +500,8 @@ app.post(
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
     const token = store.getBotToken(bot.id);
     if (!token) return res.status(409).json({ error: 'Token ilegível. Reconecte o bot.' });
-    const defaults: BotCommand[] = [
-      { command: 'start', description: 'Iniciar o atendimento' },
-      { command: 'menu', description: 'Abrir o menu de opções' },
-      { command: 'ajuda', description: 'Falar com o suporte' },
-    ];
+    const botLang = normalizeLang(bot.language);
+    const defaults: BotCommand[] = getLocalizedCommands(botLang);
     const commands: BotCommand[] = parsed.data.commands || [
       ...defaults,
       ...bot.commands.filter(
