@@ -429,6 +429,25 @@ export async function sendAnimation(
   }
 }
 
+export interface InputMediaItem {
+  type: 'photo' | 'video';
+  media: string;
+  caption?: string;
+  parse_mode?: string;
+  supports_streaming?: boolean;
+}
+
+export async function sendMediaGroup(
+  token: string,
+  chatId: string,
+  media: InputMediaItem[]
+): Promise<Array<{ message_id: number }>> {
+  return await callTelegram<Array<{ message_id: number }>>(token, 'sendMediaGroup', {
+    chat_id: chatId,
+    media,
+  });
+}
+
 export async function sendRichMessage(
   token: string,
   chatId: string,
@@ -436,9 +455,41 @@ export async function sendRichMessage(
   options: {
     imageUrl?: string;
     mediaType?: 'photo' | 'video' | 'animation';
+    mediaGrid?: Array<{ url: string; type: 'photo' | 'video' }>;
     buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
   } = {}
 ): Promise<{ message_id: number }> {
+  // Álbum / Grid com múltiplas fotos/vídeos
+  if (options.mediaGrid && options.mediaGrid.length >= 2) {
+    const validItems = options.mediaGrid.filter((item) => /^https?:\/\//i.test(item.url));
+    if (validItems.length >= 2) {
+      const inputMedia: InputMediaItem[] = validItems.slice(0, 10).map((item, idx) => ({
+        type: item.type === 'video' ? 'video' : 'photo',
+        media: item.url,
+        caption: idx === 0 ? toTelegramHtml(text.slice(0, 1024)) : undefined,
+        parse_mode: idx === 0 ? 'HTML' : undefined,
+        supports_streaming: item.type === 'video' ? true : undefined,
+      }));
+
+      try {
+        const albumResult = await sendMediaGroup(token, chatId, inputMedia);
+        // Se houver botões interativos, envia a mensagem complementar com os botões logo abaixo do grid
+        if (options.buttons && options.buttons.length > 0) {
+          await sendText(token, chatId, text, options.buttons);
+        }
+        return albumResult[0] || { message_id: 0 };
+      } catch (err) {
+        // Fallback: se o Telegram rejeitar o media group, envia o primeiro item normalmente
+        const first = validItems[0];
+        if (first.type === 'video') {
+          return await sendVideo(token, chatId, first.url, text, options.buttons);
+        }
+        return await sendPhoto(token, chatId, first.url, text, options.buttons);
+      }
+    }
+  }
+
+  // Mídia individual
   if (options.imageUrl && /^https?:\/\//i.test(options.imageUrl)) {
     const url = options.imageUrl.toLowerCase();
     const isVideo = options.mediaType === 'video' || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);

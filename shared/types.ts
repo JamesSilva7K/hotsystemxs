@@ -344,12 +344,21 @@ export interface ConnectBotInput {
   token: string;
 }
 
+export interface MediaGridItem {
+  id: string;
+  url: string;
+  type: 'photo' | 'video';
+  position?: 'main-left' | 'top-right' | 'bottom-right' | 'auto';
+  order: number;
+}
+
 export interface SendMessageInput {
   botId: string;
   chatId: string;
   text: string;
   imageUrl?: string;
   mediaType?: 'photo' | 'video' | 'animation';
+  mediaGrid?: MediaGridItem[];
   leadId?: string;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }
@@ -359,6 +368,7 @@ export interface BroadcastInput {
   text: string;
   imageUrl?: string;
   mediaType?: 'photo' | 'video' | 'animation';
+  mediaGrid?: MediaGridItem[];
   audience: CampaignAudience;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }

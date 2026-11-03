@@ -9,12 +9,18 @@ export interface InlinePreviewButton {
   row?: number; // 0 para primeira linha, 1 para segunda, etc.
 }
 
-interface TelegramPreviewProps {
+export interface TelegramPreviewProps {
   botName?: string;
   botAvatar?: string | null;
   text: string;
   mediaUrl?: string | null;
   mediaType?: 'photo' | 'video' | 'animation' | 'none';
+  mediaGrid?: Array<{
+    id?: string;
+    url: string;
+    type: 'photo' | 'video';
+    position?: 'main-left' | 'top-right' | 'bottom-right' | 'auto';
+  }>;
   buttons?: InlinePreviewButton[];
   socialProof?: string;
   className?: string;
@@ -34,6 +40,7 @@ export function TelegramPreview({
   text,
   mediaUrl,
   mediaType = 'none',
+  mediaGrid = [],
   buttons = [],
   socialProof,
   className = '',
@@ -82,31 +89,107 @@ export function TelegramPreview({
       <div className="relative flex-1 space-y-3 bg-[#0e1621] p-3.5 sm:p-4">
         {/* Balão de Mensagem */}
         <div className="relative ml-auto w-full max-w-[340px] rounded-2xl rounded-tr-sm border border-[#242f3d] bg-[#182533] p-3 shadow-md">
-          {/* Mídia Opcional (Foto / Vídeo / GIF) */}
-          {mediaUrl && mediaType !== 'none' && (
+          {/* Álbum / Grid de Mídias (Estilo Telegram com Múltiplas Posições) */}
+          {mediaGrid && mediaGrid.length >= 2 ? (
             <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
-              {mediaType === 'video' ? (
-                <div className="relative aspect-video w-full bg-black/60">
-                  <video src={mediaUrl} className="h-full w-full object-cover" controls={false} />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-                      <Play className="h-5 w-5 fill-white text-white" />
+              {mediaGrid.length === 3 ? (
+                /* Grid 3 Itens idêntico à imagem do usuário! (Esquerda 58% vertical, Direita 42% com 2 itens) */
+                <div className="grid grid-cols-[1.35fr_1fr] gap-[2px] bg-[#0c1219]">
+                  {/* Item 1 (Esquerda Principal / Alto) */}
+                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/60">
+                    {mediaGrid[0].type === 'video' ? (
+                      <video src={mediaGrid[0].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                    ) : (
+                      <img src={mediaGrid[0].url} alt="Foto 1" className="h-full w-full object-cover" />
+                    )}
+                  </div>
+
+                  {/* Coluna Direita (2 Itens Empilhados) */}
+                  <div className="grid grid-rows-2 gap-[2px]">
+                    {/* Item 2 (Superior Direito) */}
+                    <div className="relative h-full w-full overflow-hidden bg-black/60">
+                      {mediaGrid[1].type === 'video' ? (
+                        <video src={mediaGrid[1].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                      ) : (
+                        <img src={mediaGrid[1].url} alt="Foto 2" className="h-full w-full object-cover" />
+                      )}
+                    </div>
+
+                    {/* Item 3 (Inferior Direito com Play de Vídeo) */}
+                    <div className="relative h-full w-full overflow-hidden bg-black/60">
+                      {mediaGrid[2].type === 'video' ? (
+                        <>
+                          <video src={mediaGrid[2].url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur">
+                              <Play className="h-4 w-4 fill-white text-white" />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <img src={mediaGrid[2].url} alt="Mídia 3" className="h-full w-full object-cover" />
+                      )}
+                      <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1 py-0.5 text-[9px] font-mono font-medium text-white/90">
+                        23:48
+                      </span>
                     </div>
                   </div>
                 </div>
-              ) : mediaType === 'animation' ? (
-                <div className="relative aspect-video w-full">
-                  <img src={mediaUrl} alt="GIF" className="h-full w-full object-cover" />
-                  <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur">
-                    GIF
-                  </span>
+              ) : mediaGrid.length === 2 ? (
+                /* Grid 2 Itens lado a lado */
+                <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
+                  {mediaGrid.slice(0, 2).map((item, i) => (
+                    <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
+                      {item.type === 'video' ? (
+                        <>
+                          <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                            <Play className="h-6 w-6 fill-white text-white" />
+                          </div>
+                        </>
+                      ) : (
+                        <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="aspect-video w-full">
-                  <img src={mediaUrl} alt="Foto" className="h-full w-full object-cover" />
+                /* Grid 4 Itens (2x2) */
+                <div className="grid grid-cols-2 gap-[2px] bg-[#0c1219]">
+                  {mediaGrid.slice(0, 4).map((item, i) => (
+                    <div key={i} className="relative aspect-square w-full overflow-hidden bg-black/60">
+                      {item.type === 'video' ? (
+                        <video src={item.url} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+                      ) : (
+                        <img src={item.url} alt={`Mídia ${i + 1}`} className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+          ) : (
+            /* Mídia Individual (Foto / Vídeo / GIF) */
+            mediaUrl && mediaType !== 'none' && (
+              <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                {mediaType === 'video' ? (
+                  <div className="relative aspect-video w-full bg-black/60">
+                    <video src={mediaUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline controls />
+                  </div>
+                ) : mediaType === 'animation' ? (
+                  <div className="relative aspect-video w-full">
+                    <img src={mediaUrl} alt="GIF" className="h-full w-full object-cover" />
+                    <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur">
+                      GIF
+                    </span>
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full">
+                    <img src={mediaUrl} alt="Foto" className="h-full w-full object-cover" />
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Texto Formatado da Mensagem */}

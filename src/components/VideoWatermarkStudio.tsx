@@ -825,3 +825,4 @@ export function VideoWatermarkStudio({ onUseInMessage, notify }: VideoWatermarkS
     </div>
   );
 }
+

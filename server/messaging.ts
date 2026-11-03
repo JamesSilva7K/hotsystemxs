@@ -22,6 +22,7 @@ export async function deliverMessage(
   options: {
     imageUrl?: string;
     mediaType?: 'photo' | 'video' | 'animation';
+    mediaGrid?: Array<{ url: string; type: 'photo' | 'video' }>;
     buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
     leadId?: string | null;
   } = {}
@@ -38,6 +39,7 @@ export async function deliverMessage(
     const result = await sendRichMessage(token, cleanChatId, cleanText, {
       imageUrl: options.imageUrl,
       mediaType: options.mediaType,
+      mediaGrid: options.mediaGrid,
       buttons: options.buttons,
     });
     const now = new Date().toISOString();
@@ -78,6 +80,8 @@ export async function broadcastToAudience(input: {
   audience: Campaign['audience'];
   text: string;
   imageUrl?: string;
+  mediaType?: 'photo' | 'video' | 'animation';
+  mediaGrid?: Array<{ url: string; type: 'photo' | 'video' }>;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }): Promise<{
   ok: boolean;
@@ -103,6 +107,8 @@ export async function broadcastToAudience(input: {
   for (const lead of targets) {
     const result = await deliverMessage(input.botId, lead.telegramUserId, input.text, {
       imageUrl: input.imageUrl,
+      mediaType: input.mediaType,
+      mediaGrid: input.mediaGrid,
       buttons: input.buttons,
       leadId: lead.id,
     });

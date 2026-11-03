@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   FileVideo,
   Flame,
   Image as ImageIcon,
+  LayoutGrid,
   Link2,
   Loader2,
   MessageSquare,
@@ -17,7 +20,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
-import type { AppState, Lead } from '@shared/types';
+import type { AppState, Lead, MediaGridItem } from '@shared/types';
 import type { NavTab } from '../lib/nav';
 import { api } from '../lib/api';
 import { formatDate, formatNumber, plural, relativeTime, truncate } from '../lib/format';
@@ -70,6 +73,39 @@ const TEMPLATES = [
       { id: 1, text: '💋 ACESSAR VIP COMPLETO', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
     ],
   },
+  {
+    name: 'Santinha / Melhores Amigos (Grid Hot 🔥)',
+    text: `Na igreja eu sou certinha... mas aqui você vê o lado meu que quase ninguém conhece. 😇🔥\n\nComo falei no Instagram, me converti recentemente e estou mudando muita coisa na minha vida e esse grupo eu vou fechar. ❗️\n\nQuem entrar agora garante acesso ao conteúdo que já tem lá dentro e continua recebendo as próximas fotos e videos exclusivos.\n\nLá no meu Melhores Amigos você encontra:\n\n😈 Meus vídeos mais secretos\n🔥 Meu lado mais provocante, sem pose de santinha\n🎁 Conteúdo exclusivo todos os dias\n📱 Meu WhatsApp pessoal pra conversar e fazer chamada de vídeo\n\n👇 Vem me ver enquanto da tempo!`,
+    buttons: [
+      { id: 1, text: 'MENSAL + 🎁 por R$ 19.94', url: 'https://syncpayments.com.br', color: 'green' as const, row: 0 },
+      { id: 2, text: '1 DIA NO PARAISO 😈 por R$ 9.94', url: 'https://syncpayments.com.br', color: 'default' as const, row: 1 },
+      { id: 3, text: 'VITALICIO + CHAMADA ☎️ por R$ 39.94', url: 'https://syncpayments.com.br', color: 'default' as const, row: 2 },
+    ],
+    mediaMode: 'grid' as const,
+    mediaGrid: [
+      {
+        id: 'g-1',
+        url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+        type: 'photo' as const,
+        position: 'main-left' as const,
+        order: 0,
+      },
+      {
+        id: 'g-2',
+        url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+        type: 'photo' as const,
+        position: 'top-right' as const,
+        order: 1,
+      },
+      {
+        id: 'g-3',
+        url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
+        type: 'video' as const,
+        position: 'bottom-right' as const,
+        order: 2,
+      },
+    ],
+  },
 ];
 
 export function Messages({
@@ -93,6 +129,8 @@ export function Messages({
   const [text, setText] = useState(TEMPLATES[0].text);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'animation' | 'none'>('none');
+  const [mediaMode, setMediaMode] = useState<'single' | 'grid'>('single');
+  const [mediaGrid, setMediaGrid] = useState<MediaGridItem[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [buttons, setButtons] = useState<MessageButton[]>(TEMPLATES[0].buttons);
   const [sending, setSending] = useState(false);
@@ -216,10 +254,50 @@ export function Messages({
     return chatId ? 1 : 0;
   }, [mode, audience, scopedLeads, leadId, chatId]);
 
-  const applyTemplate = (tpl: typeof TEMPLATES[0]) => {
+  const applyTemplate = (tpl: (typeof TEMPLATES)[number]) => {
     setText(tpl.text);
     setButtons([...tpl.buttons]);
+    if ('mediaMode' in tpl && tpl.mediaMode === 'grid' && tpl.mediaGrid) {
+      setMediaMode('grid');
+      setMediaGrid([...tpl.mediaGrid]);
+    } else {
+      setMediaMode('single');
+      setMediaGrid([]);
+    }
     notify('info', 'Modelo aplicado', tpl.name);
+  };
+
+  const addGridItem = (type: 'photo' | 'video' = 'photo') => {
+    if (mediaGrid.length >= 10) {
+      notify('error', 'Limite atingido', 'O Telegram permite no máximo 10 mídias por álbum.');
+      return;
+    }
+    const newItem: MediaGridItem = {
+      id: `grid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      url: '',
+      type,
+      position: mediaGrid.length === 0 ? 'main-left' : mediaGrid.length === 1 ? 'top-right' : 'bottom-right',
+      order: mediaGrid.length,
+    };
+    setMediaGrid((curr) => [...curr, newItem]);
+  };
+
+  const updateGridItem = (id: string, updates: Partial<MediaGridItem>) => {
+    setMediaGrid((curr) => curr.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
+
+  const removeGridItem = (id: string) => {
+    setMediaGrid((curr) => curr.filter((item) => item.id !== id));
+  };
+
+  const moveGridItem = (index: number, direction: 'up' | 'down') => {
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === mediaGrid.length - 1)) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const updated = [...mediaGrid];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setMediaGrid(updated);
   };
 
   const send = async (event: React.FormEvent) => {
@@ -244,8 +322,9 @@ export function Messages({
           botId: bot.id,
           audience,
           text: text.trim(),
-          imageUrl: mediaUrl.trim() || undefined,
-          mediaType: mediaType !== 'none' ? mediaType : undefined,
+          imageUrl: mediaMode === 'single' ? mediaUrl.trim() || undefined : undefined,
+          mediaType: mediaMode === 'single' && mediaType !== 'none' ? mediaType : undefined,
+          mediaGrid: mediaMode === 'grid' && mediaGrid.length >= 2 ? mediaGrid : undefined,
           buttons: cleanButtons.length ? cleanButtons : undefined,
         });
         const summary = `${result.sent} enviadas · ${result.failed} falhas · ${result.total} destinos`;
@@ -269,8 +348,9 @@ export function Messages({
           botId: bot.id,
           chatId: target,
           text: text.trim(),
-          imageUrl: mediaUrl.trim() || undefined,
-          mediaType: mediaType !== 'none' ? mediaType : undefined,
+          imageUrl: mediaMode === 'single' ? mediaUrl.trim() || undefined : undefined,
+          mediaType: mediaMode === 'single' && mediaType !== 'none' ? mediaType : undefined,
+          mediaGrid: mediaMode === 'grid' && mediaGrid.length >= 2 ? mediaGrid : undefined,
           buttons: cleanButtons.length ? cleanButtons : undefined,
           leadId: mode === 'lead' ? leadId : undefined,
         });
@@ -290,7 +370,8 @@ export function Messages({
   };
 
   const selectedLead = scopedLeads.find((lead) => lead.id === leadId) || null;
-  const charLimit = mediaUrl.trim() ? 1_024 : 4_096;
+  const hasMedia = (mediaMode === 'single' && Boolean(mediaUrl.trim())) || (mediaMode === 'grid' && mediaGrid.length > 0);
+  const charLimit = hasMedia ? 1_024 : 4_096;
 
   return (
     <div className="space-y-5 pb-20 md:pb-6">
@@ -446,102 +527,279 @@ export function Messages({
               />
             </div>
 
-            {/* Anexo de Mídia Inteligente (Link, Upload Local, Copia e Cola, Estúdio) */}
-            <div className="space-y-3 rounded-2xl border border-[#263143] bg-[#121722] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Seletor de Modo de Mídia: Individual vs Grid / Álbum Telegram */}
+            <div className="space-y-4 rounded-2xl border border-[#263143] bg-[#121722] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1c2432] pb-3">
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
-                    <ImageIcon className="h-3.5 w-3.5" />
+                    <LayoutGrid className="h-3.5 w-3.5" />
                   </span>
                   <div>
-                    <span className="text-xs font-bold text-white">Mídia Anexa (Foto, Vídeo ou GIF)</span>
-                    <span className="ml-2 text-[10px] text-[#78889e]">Alta qualidade • Sem perda</span>
+                    <span className="text-xs font-bold text-white">Mídia & Álbum no Telegram</span>
+                    <span className="ml-2 text-[10px] text-[#78889e]">Alta resolução • Visual avançado</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate('studio')}
-                      className="inline-flex items-center gap-1 rounded-xl border border-[#2b3548] bg-[#171d29] px-2.5 py-1 text-[11px] font-semibold text-[#d4f933] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Criar no Estúdio de Vídeo
-                    </button>
-                  )}
-                  {mediaUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMediaUrl('');
-                        setMediaType('none');
-                      }}
-                      className="inline-flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-300 transition hover:bg-rose-500/20"
-                    >
-                      <Trash2 className="h-3 w-3" /> Remover
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Área de Entrada: Link + Botão de Upload Local + Copia e Cola */}
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <div className="relative">
-                  <input
-                    id="media-url"
-                    value={mediaUrl}
-                    onChange={(e) => handleMediaUrlChange(e.target.value)}
-                    onPaste={handlePaste}
-                    placeholder="Cole um link https:// ou use Ctrl+V para colar foto/vídeo..."
-                    className="input mono text-xs pr-20"
-                  />
-                  {uploadingMedia && (
-                    <span className="absolute right-3 top-2.5 flex items-center gap-1 text-[10px] font-bold text-[#d4f933]">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Enviando...
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => mediaFileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2b3548] bg-[#18202d] px-3.5 py-2 text-xs font-bold text-white transition hover:border-[#d4f933] hover:text-[#d4f933]"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  <span>Anexar do Aparelho</span>
-                  <input
-                    ref={mediaFileInputRef}
-                    type="file"
-                    accept="image/*,video/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-                    }}
-                  />
-                </button>
-              </div>
-
-              {/* Seletor do Tipo e Indicador */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1d2533] pt-2.5">
-                <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-[#8b9bb2]">Formato do envio:</label>
-                  <select
-                    value={mediaType}
-                    onChange={(e) => setMediaType(e.target.value as typeof mediaType)}
-                    className="rounded-lg border border-[#283244] bg-[#141923] px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#d4f933]"
+                <div className="flex items-center gap-1 rounded-xl border border-[#232b3a] bg-[#0c1017] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMediaMode('single')}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      mediaMode === 'single'
+                        ? 'bg-[#d4f933] text-black shadow'
+                        : 'text-[#8796ab] hover:text-white'
+                    }`}
                   >
-                    <option value="none">Sem mídia (Apenas texto)</option>
-                    <option value="photo">Foto (JPEG / PNG)</option>
-                    <option value="video">Vídeo (MP4 / WebM)</option>
-                    <option value="animation">GIF / Animação</option>
-                  </select>
+                    Foto / Vídeo Único
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaMode('grid');
+                      if (mediaGrid.length === 0) {
+                        // Inicia com o Grid de 3 itens estilo a foto do usuário
+                        setMediaGrid([
+                          {
+                            id: `g-${Date.now()}-1`,
+                            url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+                            type: 'photo',
+                            position: 'main-left',
+                            order: 0,
+                          },
+                          {
+                            id: `g-${Date.now()}-2`,
+                            url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+                            type: 'photo',
+                            position: 'top-right',
+                            order: 1,
+                          },
+                          {
+                            id: `g-${Date.now()}-3`,
+                            url: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-1232-large.mp4',
+                            type: 'video',
+                            position: 'bottom-right',
+                            order: 2,
+                          },
+                        ]);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      mediaMode === 'grid'
+                        ? 'bg-[#d4f933] text-black shadow'
+                        : 'text-[#8796ab] hover:text-white'
+                    }`}
+                  >
+                    <span>Grid / Álbum de Mídias</span>
+                    <span className="rounded bg-rose-500/20 px-1 text-[9px] text-rose-300">Hot 🔥</span>
+                  </button>
                 </div>
-
-                <p className="text-[10px] text-[#718096]">
-                  Dica: Você pode copiar uma foto ou print e dar <b>Ctrl+V</b> direto aqui!
-                </p>
               </div>
+
+              {/* MODO 1: Mídia Individual */}
+              {mediaMode === 'single' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-[#8b9bb2]">Anexe foto, vídeo ou GIF individual:</span>
+                    <div className="flex items-center gap-2">
+                      {onNavigate && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('studio')}
+                          className="inline-flex items-center gap-1 rounded-xl border border-[#2b3548] bg-[#171d29] px-2.5 py-1 text-[11px] font-semibold text-[#d4f933] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Estúdio de Vídeo
+                        </button>
+                      )}
+                      {mediaUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediaUrl('');
+                            setMediaType('none');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-300 transition hover:bg-rose-500/20"
+                        >
+                          <Trash2 className="h-3 w-3" /> Limpar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <div className="relative">
+                      <input
+                        id="media-url"
+                        value={mediaUrl}
+                        onChange={(e) => handleMediaUrlChange(e.target.value)}
+                        onPaste={handlePaste}
+                        placeholder="Cole link https:// ou use Ctrl+V para colar foto/vídeo..."
+                        className="input mono text-xs pr-20"
+                      />
+                      {uploadingMedia && (
+                        <span className="absolute right-3 top-2.5 flex items-center gap-1 text-[10px] font-bold text-[#d4f933]">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Enviando...
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => mediaFileInputRef.current?.click()}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2b3548] bg-[#18202d] px-3.5 py-2 text-xs font-bold text-white transition hover:border-[#d4f933] hover:text-[#d4f933]"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Anexar do Aparelho</span>
+                      <input
+                        ref={mediaFileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                        }}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1d2533] pt-2.5">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[11px] font-semibold text-[#8b9bb2]">Formato do envio:</label>
+                      <select
+                        value={mediaType}
+                        onChange={(e) => setMediaType(e.target.value as typeof mediaType)}
+                        className="rounded-lg border border-[#283244] bg-[#141923] px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#d4f933]"
+                      >
+                        <option value="none">Sem mídia (Apenas texto)</option>
+                        <option value="photo">Foto (JPEG / PNG)</option>
+                        <option value="video">Vídeo (MP4 / WebM)</option>
+                        <option value="animation">GIF / Animação</option>
+                      </select>
+                    </div>
+
+                    <p className="text-[10px] text-[#718096]">
+                      Dica: Você pode copiar uma foto ou print e dar <b>Ctrl+V</b> direto aqui!
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* MODO 2: Grid / Álbum de Fotos & Vídeos Estilo Telegram */
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Montador de Grid / Álbum ({mediaGrid.length} mídias)</h4>
+                      <p className="text-[10px] text-[#8292a8]">
+                        Escolha a posição de cada foto e vídeo no grid do Telegram (até 10 mídias).
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addGridItem('photo')}
+                        className="inline-flex items-center gap-1 rounded-xl border border-[#2b3548] bg-[#171d29] px-2.5 py-1 text-[11px] font-semibold text-[#d4f933] transition hover:bg-[#d4f933]/15"
+                      >
+                        <Plus className="h-3 w-3" /> Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addGridItem('video')}
+                        className="inline-flex items-center gap-1 rounded-xl border border-[#2b3548] bg-[#171d29] px-2.5 py-1 text-[11px] font-semibold text-[#7fc0f4] transition hover:bg-[#7fc0f4]/15"
+                      >
+                        <Plus className="h-3 w-3" /> Vídeo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Itens do Grid */}
+                  <div className="space-y-2">
+                    {mediaGrid.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[#242e3f] bg-[#0d121a] p-2.5"
+                      >
+                        {/* Indicador de Ordem e Posição */}
+                        <div className="flex items-center gap-1">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#192230] text-[10px] font-bold text-white">
+                            {idx + 1}
+                          </span>
+                          <div className="flex flex-col">
+                            <button
+                              type="button"
+                              onClick={() => moveGridItem(idx, 'up')}
+                              disabled={idx === 0}
+                              className="text-[#627086] hover:text-white disabled:opacity-30"
+                              title="Subir posição"
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveGridItem(idx, 'down')}
+                              disabled={idx === mediaGrid.length - 1}
+                              className="text-[#627086] hover:text-white disabled:opacity-30"
+                              title="Descer posição"
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Seletor do Tipo */}
+                        <select
+                          value={item.type}
+                          onChange={(e) => updateGridItem(item.id, { type: e.target.value as 'photo' | 'video' })}
+                          className="rounded-lg border border-[#293549] bg-[#161c28] px-2 py-1 text-xs font-bold text-white"
+                        >
+                          <option value="photo">Foto 📸</option>
+                          <option value="video">Vídeo 🎬</option>
+                        </select>
+
+                        {/* Seletor da Posição Específica no Grid */}
+                        <select
+                          value={item.position || 'auto'}
+                          onChange={(e) =>
+                            updateGridItem(item.id, {
+                              position: e.target.value as MediaGridItem['position'],
+                            })
+                          }
+                          className="rounded-lg border border-[#293549] bg-[#161c28] px-2 py-1 text-xs font-semibold text-[#d4f933]"
+                          title="Posição específica no grid"
+                        >
+                          <option value="main-left">🌟 Destaque Esquerda (Foto Alta)</option>
+                          <option value="top-right">↗️ Superior Direita</option>
+                          <option value="bottom-right">↘️ Inferior Direita (Vídeo / Play)</option>
+                          <option value="auto">🔄 Posição Automática</option>
+                        </select>
+
+                        {/* URL / Link da Mídia */}
+                        <input
+                          type="text"
+                          value={item.url}
+                          onChange={(e) => updateGridItem(item.id, { url: e.target.value })}
+                          placeholder="https://exemplo.com/foto.jpg ou .mp4"
+                          className="input mono min-w-[160px] flex-1 text-xs"
+                        />
+
+                        {/* Botão de Excluir */}
+                        <button
+                          type="button"
+                          onClick={() => removeGridItem(item.id)}
+                          className="rounded-lg p-1.5 text-[#6c7b91] transition hover:bg-rose-500/20 hover:text-rose-400"
+                          title="Remover do grid"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {mediaGrid.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-[#242e40] p-4 text-center text-xs text-[#73839b]">
+                      Nenhuma mídia no grid. Clique em <b>+ Foto</b> ou <b>+ Vídeo</b> para montar seu álbum!
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Botões Inline com Configuração de Cores e Posição */}
@@ -667,8 +925,9 @@ export function Messages({
             botName={bot ? `@${bot.username}` : 'Modelo Hot VIP 💋'}
             botAvatar={bot?.avatarUrl}
             text={text}
-            mediaUrl={mediaUrl}
-            mediaType={mediaType}
+            mediaUrl={mediaMode === 'single' ? mediaUrl : undefined}
+            mediaType={mediaMode === 'single' ? mediaType : undefined}
+            mediaGrid={mediaMode === 'grid' && mediaGrid.length >= 2 ? mediaGrid : undefined}
             buttons={buttons.map((b) => ({
               text: b.text,
               url: b.url,

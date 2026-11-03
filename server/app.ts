@@ -636,6 +636,14 @@ const buttonSchema = z.object({
   callbackData: z.string().trim().max(64).optional(),
 });
 
+const mediaGridItemSchema = z.object({
+  id: z.string().optional(),
+  url: z.string().trim().min(1),
+  type: z.enum(['photo', 'video']),
+  position: z.enum(['main-left', 'top-right', 'bottom-right', 'auto']).optional(),
+  order: z.number().optional(),
+});
+
 const sendSchema = z
   .object({
     botId: z.string().min(1),
@@ -643,9 +651,10 @@ const sendSchema = z
     text: z.string().trim().min(1).max(4_096),
     imageUrl: z.string().trim().max(500_000).optional().or(z.literal('')),
     mediaType: z.enum(['photo', 'video', 'animation']).optional(),
+    mediaGrid: z.array(mediaGridItemSchema).max(10).optional(),
     buttons: z.array(buttonSchema).max(12).optional(),
   })
-  .refine((data) => !data.imageUrl || data.text.length <= 1_024, {
+  .refine((data) => (!data.imageUrl && (!data.mediaGrid || data.mediaGrid.length === 0)) || data.text.length <= 1_024, {
     message: 'Com mídia anexada, a legenda deve ter no máximo 1024 caracteres.',
     path: ['text'],
   });
@@ -663,16 +672,24 @@ app.post(
         (item.telegramUserId === parsed.data.chatId || item.username === parsed.data.chatId)
     );
 
+    const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+
     let finalImageUrl = parsed.data.imageUrl || undefined;
-    if (finalImageUrl && finalImageUrl.startsWith('/uploads/')) {
-      const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
-      const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
-      if (host) finalImageUrl = `${proto}://${host}${finalImageUrl}`;
+    if (finalImageUrl && finalImageUrl.startsWith('/uploads/') && host) {
+      finalImageUrl = `${proto}://${host}${finalImageUrl}`;
     }
+
+    const finalMediaGrid = parsed.data.mediaGrid?.map((item) => {
+      let u = item.url;
+      if (u.startsWith('/uploads/') && host) u = `${proto}://${host}${u}`;
+      return { url: u, type: item.type };
+    });
 
     const result = await deliverMessage(bot.id, parsed.data.chatId, parsed.data.text, {
       imageUrl: finalImageUrl,
       mediaType: parsed.data.mediaType,
+      mediaGrid: finalMediaGrid,
       buttons: parsed.data.buttons,
       leadId: lead?.id || null,
     });
@@ -688,9 +705,10 @@ const broadcastSchema = z
     text: z.string().trim().min(1).max(4_096),
     imageUrl: z.string().trim().max(500_000).optional().or(z.literal('')),
     mediaType: z.enum(['photo', 'video', 'animation']).optional(),
+    mediaGrid: z.array(mediaGridItemSchema).max(10).optional(),
     buttons: z.array(buttonSchema).max(12).optional(),
   })
-  .refine((data) => !data.imageUrl || data.text.length <= 1_024, {
+  .refine((data) => (!data.imageUrl && (!data.mediaGrid || data.mediaGrid.length === 0)) || data.text.length <= 1_024, {
     message: 'Com mídia anexada, a legenda deve ter no máximo 1024 caracteres.',
     path: ['text'],
   });
@@ -702,18 +720,27 @@ app.post(
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
     if (!store.findBot(parsed.data.botId)) return res.status(404).json({ error: 'Bot não encontrado.' });
 
+    const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+
     let finalImageUrl = parsed.data.imageUrl || undefined;
-    if (finalImageUrl && finalImageUrl.startsWith('/uploads/')) {
-      const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
-      const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
-      if (host) finalImageUrl = `${proto}://${host}${finalImageUrl}`;
+    if (finalImageUrl && finalImageUrl.startsWith('/uploads/') && host) {
+      finalImageUrl = `${proto}://${host}${finalImageUrl}`;
     }
+
+    const finalMediaGrid = parsed.data.mediaGrid?.map((item) => {
+      let u = item.url;
+      if (u.startsWith('/uploads/') && host) u = `${proto}://${host}${u}`;
+      return { url: u, type: item.type };
+    });
 
     const result = await broadcastToAudience({
       botId: parsed.data.botId,
       audience: parsed.data.audience,
       text: parsed.data.text,
       imageUrl: finalImageUrl,
+      mediaType: parsed.data.mediaType,
+      mediaGrid: finalMediaGrid,
       buttons: parsed.data.buttons,
     });
     return res.json(result);
