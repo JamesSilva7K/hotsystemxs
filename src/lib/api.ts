@@ -109,6 +109,11 @@ export const api = {
     }),
   stopLeadFollowUp: (id: string) =>
     patch<{ ok: boolean; lead: Lead }>(`/api/leads/${id}/followup`, { action: 'stop' }),
+  uploadMedia: (input: { filename: string; dataUrl: string; mediaType?: 'photo' | 'video' | 'animation' }) =>
+    post<{ ok: boolean; url: string; fullUrl: string; filename: string; size: number; mediaType: 'photo' | 'video' | 'animation' }>(
+      '/api/upload',
+      input
+    ),
   sendMessage: (input: SendMessageInput) =>
     post<{ ok: boolean; messageId?: string; error?: string }>('/api/messages/send', input),
   broadcast: (input: BroadcastInput) =>

@@ -3,6 +3,7 @@ export type NavTab =
   | 'bots'
   | 'leads'
   | 'messages'
+  | 'studio'
   | 'automacao'
   | 'campaigns'
   | 'vendas'
@@ -32,6 +33,12 @@ export const NAV_ITEMS: Array<{ id: NavTab; label: string; title: string; subtit
     label: 'Mensagens',
     title: 'Mensagens',
     subtitle: 'Envio individual e transmissão segmentada com resultado real.',
+  },
+  {
+    id: 'studio',
+    label: 'Estúdio Vídeo',
+    title: 'Estúdio de Vídeo & Marca D\'água',
+    subtitle: 'Limpeza anti-copyright, corte de metadados e molde em tempo real.',
   },
   {
     id: 'automacao',

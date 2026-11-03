@@ -349,6 +349,7 @@ export interface SendMessageInput {
   chatId: string;
   text: string;
   imageUrl?: string;
+  mediaType?: 'photo' | 'video' | 'animation';
   leadId?: string;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }
@@ -357,6 +358,7 @@ export interface BroadcastInput {
   botId: string;
   text: string;
   imageUrl?: string;
+  mediaType?: 'photo' | 'video' | 'animation';
   audience: CampaignAudience;
   buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
 }

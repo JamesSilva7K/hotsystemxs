@@ -21,6 +21,7 @@ export async function deliverMessage(
   text: string,
   options: {
     imageUrl?: string;
+    mediaType?: 'photo' | 'video' | 'animation';
     buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
     leadId?: string | null;
   } = {}
@@ -36,6 +37,7 @@ export async function deliverMessage(
   try {
     const result = await sendRichMessage(token, cleanChatId, cleanText, {
       imageUrl: options.imageUrl,
+      mediaType: options.mediaType,
       buttons: options.buttons,
     });
     const now = new Date().toISOString();

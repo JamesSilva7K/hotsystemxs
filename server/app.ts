@@ -46,10 +46,19 @@ import { processTelegramUpdate, syncAllBots, syncBotUpdates } from './updates.js
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(here, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
+const UPLOADS_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(ROOT_DIR, 'data', 'uploads');
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+} catch {
+  // Best-effort directory creation
+}
+
 const app = express();
 app.disable('x-powered-by');
 if (TRUST_PROXY) app.set('trust proxy', 1);
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -554,6 +563,71 @@ app.delete('/api/leads/:id', (req, res) => {
   return res.json({ ok: true });
 });
 
+// ---------- Upload de Mídia (Foto, Vídeo, GIF) ----------
+
+const uploadSchema = z.object({
+  filename: z.string().trim().min(1).max(255),
+  dataUrl: z.string().min(10),
+  mediaType: z.enum(['photo', 'video', 'animation']).optional(),
+});
+
+app.post(
+  '/api/upload',
+  asyncHandler(async (req, res) => {
+    const parsed = uploadSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
+
+    const matches = parsed.data.dataUrl.match(/^data:([a-zA-Z0-9/+=.-]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Formato de arquivo inválido. Envie um base64 válido.' });
+    }
+
+    const mime = matches[1].toLowerCase();
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    if (buffer.length > 45 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Arquivo excede o limite de 45MB.' });
+    }
+
+    let ext = path.extname(parsed.data.filename).replace('.', '').toLowerCase();
+    if (!ext) {
+      if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      else if (mime.includes('gif')) ext = 'gif';
+      else if (mime.includes('mp4')) ext = 'mp4';
+      else if (mime.includes('webm')) ext = 'webm';
+      else ext = 'bin';
+    }
+
+    let detectedType: 'photo' | 'video' | 'animation' = 'photo';
+    if (parsed.data.mediaType) {
+      detectedType = parsed.data.mediaType;
+    } else if (mime.includes('video') || ['mp4', 'webm', 'mov', 'm4v'].includes(ext)) {
+      detectedType = 'video';
+    } else if (mime.includes('gif') || ext === 'gif') {
+      detectedType = 'animation';
+    }
+
+    const safeName = `media_${Date.now()}_${randomToken().slice(0, 8)}.${ext}`;
+    const filePath = path.join(UPLOADS_DIR, safeName);
+    await fs.promises.writeFile(filePath, buffer);
+
+    const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+    const fullUrl = host ? `${proto}://${host}/uploads/${safeName}` : `/uploads/${safeName}`;
+
+    return res.json({
+      ok: true,
+      url: `/uploads/${safeName}`,
+      fullUrl,
+      filename: safeName,
+      size: buffer.length,
+      mediaType: detectedType,
+    });
+  })
+);
+
 // ---------- Mensagens ----------
 
 const buttonSchema = z.object({
@@ -567,11 +641,12 @@ const sendSchema = z
     botId: z.string().min(1),
     chatId: z.string().trim().min(1),
     text: z.string().trim().min(1).max(4_096),
-    imageUrl: z.string().trim().url().optional().or(z.literal('')),
+    imageUrl: z.string().trim().max(500_000).optional().or(z.literal('')),
+    mediaType: z.enum(['photo', 'video', 'animation']).optional(),
     buttons: z.array(buttonSchema).max(12).optional(),
   })
   .refine((data) => !data.imageUrl || data.text.length <= 1_024, {
-    message: 'Com imagem, a legenda deve ter no máximo 1024 caracteres.',
+    message: 'Com mídia anexada, a legenda deve ter no máximo 1024 caracteres.',
     path: ['text'],
   });
 
@@ -587,8 +662,17 @@ app.post(
         item.botId === bot.id &&
         (item.telegramUserId === parsed.data.chatId || item.username === parsed.data.chatId)
     );
+
+    let finalImageUrl = parsed.data.imageUrl || undefined;
+    if (finalImageUrl && finalImageUrl.startsWith('/uploads/')) {
+      const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
+      const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+      if (host) finalImageUrl = `${proto}://${host}${finalImageUrl}`;
+    }
+
     const result = await deliverMessage(bot.id, parsed.data.chatId, parsed.data.text, {
-      imageUrl: parsed.data.imageUrl || undefined,
+      imageUrl: finalImageUrl,
+      mediaType: parsed.data.mediaType,
       buttons: parsed.data.buttons,
       leadId: lead?.id || null,
     });
@@ -602,11 +686,12 @@ const broadcastSchema = z
     botId: z.string().min(1),
     audience: z.enum(['all', 'novo', 'interessado', 'qualificado', 'cliente', 'arquivado']),
     text: z.string().trim().min(1).max(4_096),
-    imageUrl: z.string().trim().url().optional().or(z.literal('')),
+    imageUrl: z.string().trim().max(500_000).optional().or(z.literal('')),
+    mediaType: z.enum(['photo', 'video', 'animation']).optional(),
     buttons: z.array(buttonSchema).max(12).optional(),
   })
   .refine((data) => !data.imageUrl || data.text.length <= 1_024, {
-    message: 'Com imagem, a legenda deve ter no máximo 1024 caracteres.',
+    message: 'Com mídia anexada, a legenda deve ter no máximo 1024 caracteres.',
     path: ['text'],
   });
 
@@ -616,11 +701,19 @@ app.post(
     const parsed = broadcastSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
     if (!store.findBot(parsed.data.botId)) return res.status(404).json({ error: 'Bot não encontrado.' });
+
+    let finalImageUrl = parsed.data.imageUrl || undefined;
+    if (finalImageUrl && finalImageUrl.startsWith('/uploads/')) {
+      const proto = (req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')).toString();
+      const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+      if (host) finalImageUrl = `${proto}://${host}${finalImageUrl}`;
+    }
+
     const result = await broadcastToAudience({
       botId: parsed.data.botId,
       audience: parsed.data.audience,
       text: parsed.data.text,
-      imageUrl: parsed.data.imageUrl || undefined,
+      imageUrl: finalImageUrl,
       buttons: parsed.data.buttons,
     });
     return res.json(result);

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
+  FileVideo,
   Flame,
   Image as ImageIcon,
   Link2,
@@ -12,10 +13,12 @@ import {
   Send,
   Sparkles,
   Trash2,
+  Upload,
   Users,
   Video,
 } from 'lucide-react';
 import type { AppState, Lead } from '@shared/types';
+import type { NavTab } from '../lib/nav';
 import { api } from '../lib/api';
 import { formatDate, formatNumber, plural, relativeTime, truncate } from '../lib/format';
 import { Avatar } from './Avatar';
@@ -28,7 +31,9 @@ interface MessagesProps {
   initialLead: Lead | null;
   onConsumeLead: () => void;
   refresh: () => Promise<void>;
-  onNavigate?: (tab: string) => void;
+  onNavigate?: (tab: NavTab) => void;
+  initialMedia?: { url: string; type: 'video' | 'photo' | 'animation' } | null;
+  onConsumeMedia?: () => void;
 }
 
 type Mode = 'audience' | 'lead' | 'chat';
@@ -67,7 +72,16 @@ const TEMPLATES = [
   },
 ];
 
-export function Messages({ state, selectedBotId, initialLead, onConsumeLead, refresh, onNavigate }: MessagesProps) {
+export function Messages({
+  state,
+  selectedBotId,
+  initialLead,
+  onConsumeLead,
+  refresh,
+  onNavigate,
+  initialMedia,
+  onConsumeMedia,
+}: MessagesProps) {
   const { notify } = useToast();
   const defaultBotId =
     selectedBotId !== 'all' ? selectedBotId : state.bots[0]?.id || '';
@@ -79,9 +93,11 @@ export function Messages({ state, selectedBotId, initialLead, onConsumeLead, ref
   const [text, setText] = useState(TEMPLATES[0].text);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'animation' | 'none'>('none');
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [buttons, setButtons] = useState<MessageButton[]>(TEMPLATES[0].buttons);
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const bot = state.bots.find((item) => item.id === botId) || state.bots[0] || null;
   const scopedLeads = useMemo(
@@ -113,6 +129,83 @@ export function Messages({ state, selectedBotId, initialLead, onConsumeLead, ref
       onConsumeLead();
     }
   }, [initialLead, onConsumeLead]);
+
+  useEffect(() => {
+    if (initialMedia) {
+      setMediaUrl(initialMedia.url);
+      setMediaType(initialMedia.type);
+      onConsumeMedia?.();
+    }
+  }, [initialMedia, onConsumeMedia]);
+
+  const detectMediaType = (urlOrName: string): 'photo' | 'video' | 'animation' => {
+    const clean = urlOrName.toLowerCase();
+    if (/\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(clean)) return 'video';
+    if (/\.gif(\?.*)?$/i.test(clean)) return 'animation';
+    return 'photo';
+  };
+
+  const handleMediaUrlChange = (value: string) => {
+    setMediaUrl(value);
+    if (!value.trim()) {
+      setMediaType('none');
+    } else if (mediaType === 'none') {
+      setMediaType(detectMediaType(value));
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setUploadingMedia(true);
+    try {
+      let detected: 'photo' | 'video' | 'animation' = 'photo';
+      if (file.type.startsWith('video/')) detected = 'video';
+      else if (file.type === 'image/gif') detected = 'animation';
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string;
+        try {
+          const res = await api.uploadMedia({
+            filename: file.name,
+            dataUrl,
+            mediaType: detected,
+          });
+          if (res.ok) {
+            setMediaUrl(res.url);
+            setMediaType(res.mediaType);
+            notify('success', 'Mídia Carregada!', `${file.name} foi anexado com sucesso.`);
+          }
+        } catch {
+          // Fallback para preview imediato se rede oscilar
+          setMediaUrl(dataUrl);
+          setMediaType(detected);
+          notify('info', 'Mídia Anexada', 'Pronta para visualização e envio.');
+        } finally {
+          setUploadingMedia(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setUploadingMedia(false);
+      notify('error', 'Falha no Upload', err instanceof Error ? err.message : 'Tente novamente.');
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/') || item.type.startsWith('video/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          void handleFileUpload(file);
+          break;
+        }
+      }
+    }
+  };
 
   const recipientCount = useMemo(() => {
     if (mode === 'audience') {
@@ -152,6 +245,7 @@ export function Messages({ state, selectedBotId, initialLead, onConsumeLead, ref
           audience,
           text: text.trim(),
           imageUrl: mediaUrl.trim() || undefined,
+          mediaType: mediaType !== 'none' ? mediaType : undefined,
           buttons: cleanButtons.length ? cleanButtons : undefined,
         });
         const summary = `${result.sent} enviadas · ${result.failed} falhas · ${result.total} destinos`;
@@ -176,6 +270,7 @@ export function Messages({ state, selectedBotId, initialLead, onConsumeLead, ref
           chatId: target,
           text: text.trim(),
           imageUrl: mediaUrl.trim() || undefined,
+          mediaType: mediaType !== 'none' ? mediaType : undefined,
           buttons: cleanButtons.length ? cleanButtons : undefined,
           leadId: mode === 'lead' ? leadId : undefined,
         });
@@ -351,30 +446,101 @@ export function Messages({ state, selectedBotId, initialLead, onConsumeLead, ref
               />
             </div>
 
-            {/* Anexo de Mídia (Foto / Vídeo / GIF) */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label" htmlFor="media-url">URL da Mídia (Opcional)</label>
-                <input
-                  id="media-url"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder="https://exemplo.com/foto.jpg ou .mp4"
-                  className="input mono text-xs"
-                />
+            {/* Anexo de Mídia Inteligente (Link, Upload Local, Copia e Cola, Estúdio) */}
+            <div className="space-y-3 rounded-2xl border border-[#263143] bg-[#121722] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-white">Mídia Anexa (Foto, Vídeo ou GIF)</span>
+                    <span className="ml-2 text-[10px] text-[#78889e]">Alta qualidade • Sem perda</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {onNavigate && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('studio')}
+                      className="inline-flex items-center gap-1 rounded-xl border border-[#2b3548] bg-[#171d29] px-2.5 py-1 text-[11px] font-semibold text-[#d4f933] transition hover:border-[#d4f933]/50 hover:bg-[#d4f933]/10"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Criar no Estúdio de Vídeo
+                    </button>
+                  )}
+                  {mediaUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaUrl('');
+                        setMediaType('none');
+                      }}
+                      className="inline-flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-300 transition hover:bg-rose-500/20"
+                    >
+                      <Trash2 className="h-3 w-3" /> Remover
+                    </button>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="label">Tipo de Mídia</label>
-                <select
-                  value={mediaType}
-                  onChange={(e) => setMediaType(e.target.value as typeof mediaType)}
-                  className="input"
+
+              {/* Área de Entrada: Link + Botão de Upload Local + Copia e Cola */}
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div className="relative">
+                  <input
+                    id="media-url"
+                    value={mediaUrl}
+                    onChange={(e) => handleMediaUrlChange(e.target.value)}
+                    onPaste={handlePaste}
+                    placeholder="Cole um link https:// ou use Ctrl+V para colar foto/vídeo..."
+                    className="input mono text-xs pr-20"
+                  />
+                  {uploadingMedia && (
+                    <span className="absolute right-3 top-2.5 flex items-center gap-1 text-[10px] font-bold text-[#d4f933]">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Enviando...
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => mediaFileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#2b3548] bg-[#18202d] px-3.5 py-2 text-xs font-bold text-white transition hover:border-[#d4f933] hover:text-[#d4f933]"
                 >
-                  <option value="none">Sem mídia (Apenas texto)</option>
-                  <option value="photo">Foto (JPEG/PNG)</option>
-                  <option value="video">Vídeo (MP4)</option>
-                  <option value="animation">GIF / Animação</option>
-                </select>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Anexar do Aparelho</span>
+                  <input
+                    ref={mediaFileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Seletor do Tipo e Indicador */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1d2533] pt-2.5">
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-semibold text-[#8b9bb2]">Formato do envio:</label>
+                  <select
+                    value={mediaType}
+                    onChange={(e) => setMediaType(e.target.value as typeof mediaType)}
+                    className="rounded-lg border border-[#283244] bg-[#141923] px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#d4f933]"
+                  >
+                    <option value="none">Sem mídia (Apenas texto)</option>
+                    <option value="photo">Foto (JPEG / PNG)</option>
+                    <option value="video">Vídeo (MP4 / WebM)</option>
+                    <option value="animation">GIF / Animação</option>
+                  </select>
+                </div>
+
+                <p className="text-[10px] text-[#718096]">
+                  Dica: Você pode copiar uma foto ou print e dar <b>Ctrl+V</b> direto aqui!
+                </p>
               </div>
             </div>
 

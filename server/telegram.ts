@@ -367,17 +367,89 @@ export async function sendPhoto(
   }
 }
 
+export async function sendVideo(
+  token: string,
+  chatId: string,
+  videoUrl: string,
+  caption: string,
+  buttons?: Array<{ text: string; url?: string; callbackData?: string }>
+): Promise<{ message_id: number }> {
+  const markup = buildReplyMarkup(buttons);
+  const safeCaption = caption.slice(0, 1024);
+  try {
+    return await callTelegram<{ message_id: number }>(token, 'sendVideo', {
+      chat_id: chatId,
+      video: videoUrl,
+      caption: toTelegramHtml(safeCaption),
+      parse_mode: 'HTML',
+      reply_markup: markup,
+      supports_streaming: true,
+    });
+  } catch (error) {
+    if (error instanceof TelegramError && error.code === 400) {
+      return callTelegram<{ message_id: number }>(token, 'sendVideo', {
+        chat_id: chatId,
+        video: videoUrl,
+        caption: safeCaption,
+        reply_markup: markup,
+        supports_streaming: true,
+      });
+    }
+    throw error;
+  }
+}
+
+export async function sendAnimation(
+  token: string,
+  chatId: string,
+  animationUrl: string,
+  caption: string,
+  buttons?: Array<{ text: string; url?: string; callbackData?: string }>
+): Promise<{ message_id: number }> {
+  const markup = buildReplyMarkup(buttons);
+  const safeCaption = caption.slice(0, 1024);
+  try {
+    return await callTelegram<{ message_id: number }>(token, 'sendAnimation', {
+      chat_id: chatId,
+      animation: animationUrl,
+      caption: toTelegramHtml(safeCaption),
+      parse_mode: 'HTML',
+      reply_markup: markup,
+    });
+  } catch (error) {
+    if (error instanceof TelegramError && error.code === 400) {
+      return callTelegram<{ message_id: number }>(token, 'sendAnimation', {
+        chat_id: chatId,
+        animation: animationUrl,
+        caption: safeCaption,
+        reply_markup: markup,
+      });
+    }
+    throw error;
+  }
+}
+
 export async function sendRichMessage(
   token: string,
   chatId: string,
   text: string,
   options: {
     imageUrl?: string;
+    mediaType?: 'photo' | 'video' | 'animation';
     buttons?: Array<{ text: string; url?: string; callbackData?: string }>;
   } = {}
 ): Promise<{ message_id: number }> {
   if (options.imageUrl && /^https?:\/\//i.test(options.imageUrl)) {
+    const url = options.imageUrl.toLowerCase();
+    const isVideo = options.mediaType === 'video' || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+    const isAnimation = options.mediaType === 'animation' || /\.gif(\?.*)?$/i.test(url);
     try {
+      if (isVideo) {
+        return await sendVideo(token, chatId, options.imageUrl, text, options.buttons);
+      }
+      if (isAnimation) {
+        return await sendAnimation(token, chatId, options.imageUrl, text, options.buttons);
+      }
       return await sendPhoto(token, chatId, options.imageUrl, text, options.buttons);
     } catch (error) {
       if (error instanceof TelegramError && error.code === 400) {

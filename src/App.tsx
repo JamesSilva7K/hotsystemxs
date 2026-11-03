@@ -12,6 +12,7 @@ import { Campaigns } from './components/Campaigns';
 import { Automation } from './components/Automation';
 import { Sales } from './components/Sales';
 import { SettingsView } from './components/SettingsView';
+import { VideoWatermarkStudio } from './components/VideoWatermarkStudio';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Login } from './components/Login';
@@ -33,6 +34,7 @@ export default function App() {
   );
   const [syncing, setSyncing] = useState(false);
   const [composerLead, setComposerLead] = useState<Lead | null>(null);
+  const [composerMedia, setComposerMedia] = useState<{ url: string; type: 'video' | 'photo' | 'animation' } | null>(null);
   const loadSeq = useRef(0);
   const prevStateRef = useRef<AppState | null>(null);
 
@@ -232,7 +234,20 @@ export default function App() {
             selectedBotId={selectedBotId}
             initialLead={composerLead}
             onConsumeLead={() => setComposerLead(null)}
+            initialMedia={composerMedia}
+            onConsumeMedia={() => setComposerMedia(null)}
+            onNavigate={setTab}
             refresh={() => loadState()}
+          />
+        );
+      case 'studio':
+        return (
+          <VideoWatermarkStudio
+            notify={notify}
+            onUseInMessage={(mediaUrl, mediaType) => {
+              setComposerMedia({ url: mediaUrl, type: mediaType });
+              setTab('messages');
+            }}
           />
         );
       case 'automacao':
