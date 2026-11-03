@@ -65,6 +65,14 @@ export interface StoredBot {
   vipRequirements?: import('../shared/types.js').VipRequirements;
   operatingMode?: import('../shared/types.js').BotOperatingMode;
   funnelStages?: import('../shared/types.js').BotFunnelStageConfig[];
+  previewGroupId?: string | null;
+  previewGroupTitle?: string | null;
+  previewGroupInviteLink?: string | null;
+  previewScheduleMode?: 'interval' | 'hours' | 'off';
+  previewScheduleIntervalHours?: number;
+  previewScheduleHours?: string[];
+  previewAutoMedia?: boolean;
+  previewLastSentAt?: string | null;
 }
 
 interface Database {
@@ -573,6 +581,7 @@ export class Store {
     sourceChatTitle: string;
     languageCode?: string | null;
     lastMessageText: string;
+    trackingSource?: string | null;
   }): { lead: Lead; created: boolean } {
     return this.transaction((db) => {
       const now = new Date().toISOString();
@@ -588,10 +597,22 @@ export class Store {
         existing.lastMessageText = input.lastMessageText.slice(0, 500);
         existing.messagesCount += 1;
         existing.updatedAt = now;
+        if (input.trackingSource) {
+          existing.trackingSource = input.trackingSource;
+          existing.dmUnlocked = true;
+          if (!existing.dmUnlockedAt) existing.dmUnlockedAt = now;
+          if (!existing.tags.includes(`orig-${input.trackingSource}`)) {
+            existing.tags.push(`orig-${input.trackingSource}`);
+          }
+        }
         if (existing.sourceChatTitle.startsWith('Conversa')) {
           existing.sourceChatTitle = input.sourceChatTitle || existing.sourceChatTitle;
         }
         return { lead: clone(existing), created: false };
+      }
+      const initialTags: string[] = [];
+      if (input.trackingSource) {
+        initialTags.push(`orig-${input.trackingSource}`);
       }
       const lead: Lead = {
         id: `lead_${input.botId}_${input.telegramUserId}`,
@@ -611,10 +632,13 @@ export class Store {
         lastMessageText: input.lastMessageText.slice(0, 500),
         messagesCount: 1,
         notes: '',
-        tags: [],
+        tags: initialTags,
         followUp: null,
         createdAt: now,
         updatedAt: now,
+        trackingSource: input.trackingSource || null,
+        dmUnlocked: Boolean(input.trackingSource),
+        dmUnlockedAt: input.trackingSource ? now : null,
       };
       db.leads.unshift(lead);
       return { lead: clone(lead), created: true };
@@ -635,6 +659,9 @@ export class Store {
         | 'vipUnlocked'
         | 'vipUnlockedAt'
         | 'vipTermsAccepted'
+        | 'trackingSource'
+        | 'dmUnlocked'
+        | 'dmUnlockedAt'
       >
     >
   ): Lead | null {
@@ -654,6 +681,9 @@ export class Store {
       if (patch.vipUnlocked !== undefined) lead.vipUnlocked = patch.vipUnlocked;
       if (patch.vipUnlockedAt !== undefined) lead.vipUnlockedAt = patch.vipUnlockedAt;
       if (patch.vipTermsAccepted !== undefined) lead.vipTermsAccepted = patch.vipTermsAccepted;
+      if (patch.trackingSource !== undefined) lead.trackingSource = patch.trackingSource;
+      if (patch.dmUnlocked !== undefined) lead.dmUnlocked = patch.dmUnlocked;
+      if (patch.dmUnlockedAt !== undefined) lead.dmUnlockedAt = patch.dmUnlockedAt;
       lead.updatedAt = new Date().toISOString();
       return clone(lead);
     });
@@ -942,6 +972,14 @@ export class Store {
       },
       operatingMode: bot.operatingMode || 'conversational_sales',
       funnelStages: bot.funnelStages && bot.funnelStages.length > 0 ? bot.funnelStages : this.getDefaultFunnelStages(),
+      previewGroupId: bot.previewGroupId || null,
+      previewGroupTitle: bot.previewGroupTitle || null,
+      previewGroupInviteLink: bot.previewGroupInviteLink || null,
+      previewScheduleMode: bot.previewScheduleMode || 'off',
+      previewScheduleIntervalHours: bot.previewScheduleIntervalHours || 4,
+      previewScheduleHours: bot.previewScheduleHours || ['12:00', '18:00', '22:30'],
+      previewAutoMedia: bot.previewAutoMedia ?? true,
+      previewLastSentAt: bot.previewLastSentAt || null,
     };
   }
 

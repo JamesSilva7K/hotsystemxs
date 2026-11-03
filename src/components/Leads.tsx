@@ -215,8 +215,30 @@ export function Leads({ state, selectedBotId, refresh, onCompose }: LeadsProps) 
                         </div>
                       </div>
                     </td>
-                    <td className="max-w-[150px] px-4 py-3.5">
-                      <div className="truncate text-[#b0bac9]">{lead.sourceChatTitle}</div>
+                    <td className="max-w-[170px] px-4 py-3.5">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {lead.trackingSource ? (
+                          <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
+                            {lead.trackingSource.includes('insta')
+                              ? '📸 Instagram'
+                              : lead.trackingSource.includes('previa')
+                              ? '🔞 Prévias'
+                              : lead.trackingSource.includes('tiktok')
+                              ? '🎵 TikTok'
+                              : lead.trackingSource.includes('whatsapp')
+                              ? '💬 WhatsApp'
+                              : lead.trackingSource.includes('twitter')
+                              ? '🐦 Twitter/X'
+                              : `🔗 ${lead.trackingSource}`}
+                          </span>
+                        ) : null}
+                        {lead.dmUnlocked && (
+                          <span className="rounded bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.2 text-[9px] font-bold text-purple-300">
+                            🔓 DM
+                          </span>
+                        )}
+                      </div>
+                      <div className="truncate text-[#b0bac9] text-[11px] mt-0.5">{lead.sourceChatTitle}</div>
                       <div className="mono text-[10px] text-[#626e82]">ID {lead.telegramUserId}</div>
                     </td>
                     <td className="px-4 py-3.5"><StatusBadge status={lead.status} /></td>

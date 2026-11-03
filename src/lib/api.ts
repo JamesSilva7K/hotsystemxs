@@ -94,6 +94,13 @@ export const api = {
       };
       operatingMode?: import('@shared/types').BotOperatingMode;
       funnelStages?: import('@shared/types').BotFunnelStageConfig[];
+      previewGroupId?: string | null;
+      previewGroupTitle?: string | null;
+      previewGroupInviteLink?: string | null;
+      previewScheduleMode?: 'interval' | 'hours' | 'off';
+      previewScheduleIntervalHours?: number;
+      previewScheduleHours?: string[];
+      previewAutoMedia?: boolean;
     }
   ) =>
     request<{ ok: boolean; bot?: AppState['bots'][number] }>(`/api/bots/${id}`, {
@@ -114,6 +121,23 @@ export const api = {
         inviteLink: string | null;
       };
     }>(`/api/bots/${id}/vip-channel/validate`, { channelId }),
+  validatePreviewGroup: (id: string, groupId: string) =>
+    post<{
+      ok: boolean;
+      group: {
+        id: string;
+        title: string;
+        username: string | null;
+        type: string;
+        membersCount: number;
+        isAdmin: boolean;
+        inviteLink: string | null;
+      };
+    }>(`/api/bots/${id}/preview-group/validate`, { groupId }),
+  sendPreviewTeaserNow: (id: string, templateId?: string) =>
+    post<{ ok: boolean; messageId?: string }>(`/api/bots/${id}/preview-group/send-now`, { templateId }),
+  getPreviewTemplates: () =>
+    request<{ ok: boolean; templates: import('@shared/types').PreviewTeaserTemplate[] }>('/api/preview-templates'),
   refreshBot: (id: string) => post<{ ok: boolean; latencyMs: number }>(`/api/bots/${id}/refresh`),
   deleteBot: (id: string) => request<{ ok: boolean }>(`/api/bots/${id}`, { method: 'DELETE' }),
   syncBot: (id: string) =>

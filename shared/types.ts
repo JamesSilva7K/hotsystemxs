@@ -55,6 +55,23 @@ export interface Bot {
   vipRequirements?: VipRequirements;
   operatingMode?: BotOperatingMode;
   funnelStages?: BotFunnelStageConfig[];
+  previewGroupId?: string | null;
+  previewGroupTitle?: string | null;
+  previewGroupInviteLink?: string | null;
+  previewScheduleMode?: 'interval' | 'hours' | 'off';
+  previewScheduleIntervalHours?: number;
+  previewScheduleHours?: string[];
+  previewAutoMedia?: boolean;
+  previewLastSentAt?: string | null;
+}
+
+export interface PreviewTeaserTemplate {
+  id: string;
+  title: string;
+  category: 'provocacao' | 'escassez' | 'enquete' | 'audio';
+  body: string;
+  ctaText: string;
+  suggestedTag: string;
 }
 
 export interface Chat {
@@ -107,6 +124,9 @@ export interface Lead {
   vipUnlocked?: boolean;
   vipUnlockedAt?: string | null;
   vipTermsAccepted?: boolean;
+  trackingSource?: string | null;
+  dmUnlocked?: boolean;
+  dmUnlockedAt?: string | null;
 }
 
 export interface MessageLog {

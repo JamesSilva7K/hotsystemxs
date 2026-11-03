@@ -18,9 +18,11 @@ import {
   Lock,
   MessageSquare,
   Plus,
+  QrCode,
   Radio,
   RefreshCw,
   Send,
+  Share2,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -99,6 +101,98 @@ const DEFAULT_FUNNEL_STAGES: BotFunnelStageConfig[] = [
   },
 ];
 
+const PREVIEW_TEASERS = [
+  {
+    id: 'prev_teaser_sensorial',
+    title: 'Provocação Sensorial (Vídeo Sem Tarja)',
+    badge: 'Mais Cliques 🔥',
+    body: 'Gravei um vídeo novo aqui na cama que ficou tão quente que nem o Telegram aguentaria aberto sem censura... 🔥🙈\n\nQuem quiser ver a versão completa sem tarja e sem cortes, clica no botão abaixo e me chama no meu chat privado agora! 👇',
+    ctaText: '🔞 DESTRAVAR VÍDEO COMPLETO NA DM',
+    tag: 'previas_free',
+  },
+  {
+    id: 'prev_escassez_vagas',
+    title: 'Vagas Relâmpago com Desconto (Escassez)',
+    badge: '35% OFF 🎁',
+    body: 'Meninos, vou abrir apenas 5 vagas com 35% de desconto no meu VIP pros 5 primeiros que me chamarem no privado nos próximos minutos! ⏳🎁\n\nQuem entrar agora leva todos os meus conteúdos acumulados + meu WhatsApp pessoal.',
+    ctaText: '🎁 GARANTIR MINHA VAGA COM DESCONTO',
+    tag: 'previas_desconto',
+  },
+  {
+    id: 'prev_enquete_recompensa',
+    title: 'Enquete com Foto Exclusiva de Recompensa',
+    badge: 'Interativo 😈',
+    body: 'Qual lingerie você prefere que eu use hoje à noite? 😈💋\n\n1️⃣ Calcinha de renda vermelha\n2️⃣ Fio dental preto transparente\n3️⃣ Nenhuma (completamente nua)\n\nQuem vier me contar no privado ganha uma foto exclusiva de prévia agora mesmo!',
+    ctaText: '🔥 RESGATAR FOTO DE PRÉVIA NA DM',
+    tag: 'previas_enquete',
+  },
+  {
+    id: 'prev_audio_gemido',
+    title: 'Áudio Proibido & Barulho Molhado',
+    badge: 'Sensorial 💦',
+    body: 'Acabei de gravar um áudio deitada na cama me tocando enquanto pensava em vocês... 💦🤤\n\nSe de fone de ouvido já dá arrepio na espinha, imagina ver o vídeo completo na íntegra no meu canal VIP. Vem falar comigo no privado:',
+    ctaText: '💦 ME CHAMAR NO PRIVADO',
+    tag: 'previas_audio',
+  },
+  {
+    id: 'prev_chamada_video',
+    title: 'Bônus Chamada de Vídeo Privativa',
+    badge: 'VIP + Chamada ☎️',
+    body: 'Tô sozinha no quarto e hoje quero companhia... Quem fechar plano vitalício hoje ganha uma chamada de vídeo comigo na hora! ☎️🔥\n\nCorre e me manda uma mensagem na DM antes que eu feche a agenda:',
+    ctaText: '☎️ ME CHAMAR NA DM PRA CHAMADA',
+    tag: 'previas_chamada',
+  },
+];
+
+const SOCIAL_PLATFORMS = [
+  {
+    id: 'bio_insta',
+    name: 'Instagram (Bio)',
+    icon: '📸',
+    tag: 'bio_insta',
+    bioTemplate: (link: string, name: string) =>
+      `💋 ${name} | Conteúdos Proibidos sem Censura 🔥\n🔞 Chamadas de vídeo & arquivos secretos\n👇 Fale comigo no Telegram privado:\n${link}`,
+  },
+  {
+    id: 'insta_stories',
+    name: 'Instagram (Stories / Link)',
+    icon: '🔥',
+    tag: 'insta_stories',
+    bioTemplate: (link: string, _name: string) =>
+      `🔞 Arrasta pra cima ou toca no link pra ver o vídeo completo sem tarja comigo:\n${link}`,
+  },
+  {
+    id: 'tiktok',
+    name: 'TikTok (Bio)',
+    icon: '🎵',
+    tag: 'tiktok',
+    bioTemplate: (link: string, _name: string) => `✨ Sem cortes e sem filtros no Telegram 👇\n${link}`,
+  },
+  {
+    id: 'twitter_x',
+    name: 'Twitter / X',
+    icon: '🐦',
+    tag: 'twitter_x',
+    bioTemplate: (link: string, _name: string) =>
+      `🔥 Meus vídeos mais pesados e sem tarja liberados no Telegram privado 👇\n${link}`,
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp / Status',
+    icon: '💬',
+    tag: 'whatsapp',
+    bioTemplate: (link: string, _name: string) => `Oi amor, meu Telegram secreto sem censura tá aqui 👇\n${link}`,
+  },
+  {
+    id: 'previas_free',
+    name: 'Grupo de Prévias (CTA DM)',
+    icon: '🔞',
+    tag: 'previas_free',
+    bioTemplate: (link: string, _name: string) =>
+      `👉 Destrave o chat privado diretamente comigo no Telegram:\n${link}`,
+  },
+];
+
 export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const { notify } = useToast();
   const [token, setToken] = useState('');
@@ -125,6 +219,26 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const [operatingMode, setOperatingMode] = useState<BotOperatingMode>('conversational_sales');
   const [funnelStages, setFunnelStages] = useState<BotFunnelStageConfig[]>(DEFAULT_FUNNEL_STAGES);
 
+  // Estados de Grupo de Prévias & Agendamento
+  const [previewGroupInput, setPreviewGroupInput] = useState('');
+  const [validatingPreview, setValidatingPreview] = useState(false);
+  const [previewValidationResult, setPreviewValidationResult] = useState<{
+    title: string;
+    membersCount: number;
+    isAdmin: boolean;
+  } | null>(null);
+  const [previewScheduleMode, setPreviewScheduleMode] = useState<'interval' | 'hours' | 'off'>('off');
+  const [previewScheduleIntervalHours, setPreviewScheduleIntervalHours] = useState<number>(4);
+  const [previewScheduleHours, setPreviewScheduleHours] = useState<string[]>(['12:00', '18:00', '22:30']);
+  const [sendingPreviewTeaser, setSendingPreviewTeaser] = useState(false);
+  const [selectedTeaserTemplateId, setSelectedTeaserTemplateId] = useState<string>('prev_teaser_sensorial');
+
+  // Estados do Gerador de Links Rastreados para Redes Sociais
+  const [socialPlatform, setSocialPlatform] = useState<string>('bio_insta');
+  const [copiedSocialLink, setCopiedSocialLink] = useState(false);
+  const [copiedBioText, setCopiedBioText] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(false);
+
   const openBot = state.bots.find((bot) => bot.id === openBotId) || null;
 
   useEffect(() => {
@@ -150,8 +264,33 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
             }
           : null
       );
+      // Sincroniza Grupo de Prévias
+      setPreviewGroupInput(openBot.previewGroupId || '');
+      setPreviewScheduleMode(openBot.previewScheduleMode || 'off');
+      setPreviewScheduleIntervalHours(openBot.previewScheduleIntervalHours || 4);
+      setPreviewScheduleHours(openBot.previewScheduleHours || ['12:00', '18:00', '22:30']);
+      setPreviewValidationResult(
+        openBot.previewGroupId && openBot.previewGroupTitle
+          ? {
+              title: openBot.previewGroupTitle,
+              membersCount: 0,
+              isAdmin: true,
+            }
+          : null
+      );
     }
-  }, [openBot?.id, openBot?.vipChannelId, openBot?.vipChannelTitle, openBot?.operatingMode, openBot?.funnelStages]);
+  }, [
+    openBot?.id,
+    openBot?.vipChannelId,
+    openBot?.vipChannelTitle,
+    openBot?.operatingMode,
+    openBot?.funnelStages,
+    openBot?.previewGroupId,
+    openBot?.previewGroupTitle,
+    openBot?.previewScheduleMode,
+    openBot?.previewScheduleIntervalHours,
+    openBot?.previewScheduleHours,
+  ]);
 
   const handleToggleFunnelStage = async (stageId: string) => {
     if (!openBot) return;
@@ -226,6 +365,102 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
       await refresh();
     } catch {
       setVipReqs(vipReqs);
+    }
+  };
+
+  const handleSavePreviewGroup = async () => {
+    if (!openBot) return;
+    setValidatingPreview(true);
+    try {
+      if (previewGroupInput.trim()) {
+        const valRes = await api.validatePreviewGroup(openBot.id, previewGroupInput.trim());
+        setPreviewValidationResult({
+          title: valRes.group.title,
+          membersCount: valRes.group.membersCount,
+          isAdmin: valRes.group.isAdmin,
+        });
+        await api.updateBot(openBot.id, {
+          previewGroupId: valRes.group.id,
+          previewGroupTitle: valRes.group.title,
+          previewGroupInviteLink: valRes.group.inviteLink,
+          previewScheduleMode,
+          previewScheduleIntervalHours,
+          previewScheduleHours,
+        });
+        notify(
+          'success',
+          'Grupo de Prévias Validado!',
+          `${valRes.group.title} conectado com sucesso para agendamentos automáticos.`
+        );
+      } else {
+        await api.updateBot(openBot.id, {
+          previewGroupId: null,
+          previewGroupTitle: null,
+          previewGroupInviteLink: null,
+          previewScheduleMode: 'off',
+        });
+        setPreviewValidationResult(null);
+        notify('info', 'Grupo de Prévias Removido', 'Os envios automáticos de prévias foram pausados.');
+      }
+      await refresh();
+    } catch (err) {
+      notify(
+        'error',
+        'Falha na validação',
+        err instanceof Error ? err.message : 'Verifique se o bot é administrador do grupo de prévias.'
+      );
+    } finally {
+      setValidatingPreview(false);
+    }
+  };
+
+  const handleUpdateScheduleConfig = async (
+    mode: 'interval' | 'hours' | 'off',
+    interval = previewScheduleIntervalHours,
+    hours = previewScheduleHours
+  ) => {
+    if (!openBot) return;
+    setPreviewScheduleMode(mode);
+    setPreviewScheduleIntervalHours(interval);
+    setPreviewScheduleHours(hours);
+    try {
+      await api.updateBot(openBot.id, {
+        previewScheduleMode: mode,
+        previewScheduleIntervalHours: interval,
+        previewScheduleHours: hours,
+      });
+      notify(
+        'success',
+        'Agendador Atualizado',
+        mode === 'off'
+          ? 'Envios automáticos desativados.'
+          : mode === 'interval'
+          ? `Disparos automáticos a cada ${interval} horas.`
+          : `Disparos fixos nos horários: ${hours.join(', ')}.`
+      );
+      await refresh();
+    } catch {
+      // Revert on error
+    }
+  };
+
+  const handleSendTeaserNow = async () => {
+    if (!openBot) return;
+    if (!openBot.previewGroupId && !previewGroupInput.trim()) {
+      notify('error', 'Sem Grupo de Prévias', 'Vincule um grupo de prévias antes de disparar teasers.');
+      return;
+    }
+    setSendingPreviewTeaser(true);
+    try {
+      const res = await api.sendPreviewTeaserNow(openBot.id, selectedTeaserTemplateId);
+      if (res.ok) {
+        notify('success', 'Prévia Disparada! 🚀', 'A mensagem com botão direto para a DM foi postada no grupo.');
+        await refresh();
+      }
+    } catch (err) {
+      notify('error', 'Erro ao disparar', err instanceof Error ? err.message : 'Tente novamente.');
+    } finally {
+      setSendingPreviewTeaser(false);
     }
   };
   const webhookBase = state.server.publicBaseUrl || state.settings.publicBaseUrl;
@@ -1097,6 +1332,397 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                   💎 ENTRAR NO CANAL VIP AGORA
                 </div>
               </div>
+            </div>
+
+            {/* Grupo de Prévias Grátis & Agendamento Automático de Teasers 📸⏰ */}
+            <div className="space-y-4 rounded-2xl border border-amber-500/30 bg-[#14100c] p-4 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-200">
+                      Grupo de Prévias Grátis & Agendamento Automático
+                    </h3>
+                    <p className="text-[11px] text-[#a89885]">
+                      Dispare teasers e provocações programadas no grupo grátis com botão direto para a DM da modelo.
+                    </p>
+                  </div>
+                </div>
+                {openBot.previewGroupId && (
+                  <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
+                    {previewScheduleMode === 'interval'
+                      ? `Ativo · A cada ${previewScheduleIntervalHours}h`
+                      : previewScheduleMode === 'hours'
+                      ? `Ativo · ${previewScheduleHours.length} horários fixos`
+                      : 'Conectado · Envio Manual'}
+                  </span>
+                )}
+              </div>
+
+              {/* Input para vincular Grupo de Prévias */}
+              <div>
+                <label className="text-[11px] font-semibold text-[#c7b7a3]">
+                  ID do Grupo ou Canal de Prévias Grátis (-100... ou @canal):
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8d7c67]" />
+                    <input
+                      value={previewGroupInput}
+                      onChange={(e) => setPreviewGroupInput(e.target.value)}
+                      placeholder="-100192837482 ou @seucanalprevias"
+                      className="input mono pl-9 text-xs border-amber-500/30 bg-[#0d0a08] text-white focus:border-amber-400"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSavePreviewGroup}
+                    disabled={validatingPreview}
+                    className="btn-primary shrink-0 bg-amber-600 text-white hover:bg-amber-500 border-none text-xs font-bold shadow-md shadow-amber-600/30"
+                  >
+                    {validatingPreview ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    Validar & Salvar Grupo
+                  </button>
+                </div>
+                {previewValidationResult && (
+                  <div className="mt-2 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                      <div>
+                        <span className="font-bold">{previewValidationResult.title}</span>
+                        {previewValidationResult.membersCount > 0 && (
+                          <span className="ml-2 text-[10px] text-amber-300/80">
+                            {formatNumber(previewValidationResult.membersCount)} membros reais
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                      {previewValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Seletor de Modo de Horário / Intervalo Automático */}
+              <div className="space-y-2 pt-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#b8a692]">
+                  Modo de Agendamento Automático:
+                </label>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleUpdateScheduleConfig('interval')}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                      previewScheduleMode === 'interval'
+                        ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-xs font-bold text-white">Intervalo Regular</span>
+                      <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                        ⚡ Contínuo
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[#9d8d7b]">Dispara teasers automaticamente a cada X horas.</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleUpdateScheduleConfig('hours')}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                      previewScheduleMode === 'hours'
+                        ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-xs font-bold text-white">Horários Nobres</span>
+                      <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                        🎯 Pico de Conversão
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[#9d8d7b]">Posta nos horários de maior tesão e atividade.</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleUpdateScheduleConfig('off')}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                      previewScheduleMode === 'off'
+                        ? 'border-gray-500 bg-gray-500/20 text-white'
+                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-xs font-bold text-white">Desativado</span>
+                      <span className="rounded bg-gray-500/20 px-1.5 py-0.2 text-[9px] font-bold text-gray-400">
+                        Pausado
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[#9d8d7b]">Envios apenas manuais pelo painel.</p>
+                  </button>
+                </div>
+
+                {/* Opções de Intervalo */}
+                {previewScheduleMode === 'interval' && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
+                    <span className="text-[11px] text-[#c7b7a3]">Disparar a cada:</span>
+                    {[2, 3, 4, 6, 8, 12].map((hours) => (
+                      <button
+                        key={hours}
+                        type="button"
+                        onClick={() => void handleUpdateScheduleConfig('interval', hours)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                          previewScheduleIntervalHours === hours
+                            ? 'bg-amber-500 text-black shadow'
+                            : 'bg-[#1e1710] text-[#a89885] hover:bg-[#2c2217]'
+                        }`}
+                      >
+                        {hours}h
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Opções de Horários Nobres */}
+                {previewScheduleMode === 'hours' && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
+                    <span className="text-[11px] text-[#c7b7a3]">Horários configurados:</span>
+                    {['12:00', '18:00', '21:00', '22:30', '00:00'].map((hour) => {
+                      const isActive = previewScheduleHours.includes(hour);
+                      return (
+                        <button
+                          key={hour}
+                          type="button"
+                          onClick={() => {
+                            const updated = isActive
+                              ? previewScheduleHours.filter((h) => h !== hour)
+                              : [...previewScheduleHours, hour];
+                            void handleUpdateScheduleConfig('hours', previewScheduleIntervalHours, updated);
+                          }}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                            isActive
+                              ? 'bg-amber-500 text-black shadow'
+                              : 'bg-[#1e1710] text-[#8e7e6c] hover:bg-[#2c2217]'
+                          }`}
+                        >
+                          {hour} {isActive ? '✓' : '+'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Biblioteca de Modelos de Mensagens de Prévia & Disparo Imediato */}
+              <div className="space-y-2 rounded-xl border border-amber-500/20 bg-[#0a0806] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                    Modelos de Mensagem de Prévia (Alta Conversão):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSendTeaserNow}
+                    disabled={sendingPreviewTeaser || !openBot.previewGroupId}
+                    className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
+                  >
+                    {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    Disparar Prévia Agora 🚀
+                  </button>
+                </div>
+
+                {/* Seletor de Templates de Prévia */}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PREVIEW_TEASERS.map((teaser) => (
+                    <div
+                      key={teaser.id}
+                      onClick={() => setSelectedTeaserTemplateId(teaser.id)}
+                      className={`cursor-pointer rounded-xl border p-2.5 transition ${
+                        selectedTeaserTemplateId === teaser.id
+                          ? 'border-amber-400 bg-amber-500/15 text-white'
+                          : 'border-[#2d2217] bg-[#100d09] text-[#8d7c69] hover:border-amber-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">{teaser.title}</span>
+                        <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                          {teaser.badge}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#9f8e7b]">
+                        {teaser.body}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-[9px] text-amber-400 font-bold">
+                        <span>Botão: {teaser.ctaText}</span>
+                        <span className="text-emerald-400">Tag: ?start={teaser.tag}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Gerador de Links Rastreados para Redes Sociais & DM da Modelo 🔗 */}
+            <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-[#0d1612] p-4 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                    <Share2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-200">
+                      Gerador de Link do Telegram 100% Real para Redes Sociais
+                    </h3>
+                    <p className="text-[11px] text-[#8fa89b]">
+                      Gere links validados para Instagram, TikTok e WhatsApp que destravam o chat privado da modelo com tracking.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                  ● Link Oficial Validado na API
+                </span>
+              </div>
+
+              {/* Seletor de Redes Sociais */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da699]">
+                  Selecione onde você vai divulgar:
+                </label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {SOCIAL_PLATFORMS.map((plat) => (
+                    <button
+                      key={plat.id}
+                      type="button"
+                      onClick={() => setSocialPlatform(plat.id)}
+                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                        socialPlatform === plat.id
+                          ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                          : 'border-[#1b2b23] bg-[#08100c] text-[#7d9689] hover:border-emerald-500/40'
+                      }`}
+                    >
+                      <span>{plat.icon}</span>
+                      <span>{plat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Caixa de Link Gerado & Ações */}
+              {(() => {
+                const activePlat = SOCIAL_PLATFORMS.find((p) => p.id === socialPlatform) || SOCIAL_PLATFORMS[0];
+                const officialLink = `https://t.me/${openBot.username}?start=${activePlat.tag}`;
+                const readyBio = activePlat.bioTemplate(officialLink, openBot.firstName);
+
+                return (
+                  <div className="space-y-3 rounded-xl border border-emerald-500/20 bg-[#080f0b] p-3.5">
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
+                        <span>Link Oficial Formatado (Rastreamento Automático):</span>
+                        <span className="text-[10px] text-emerald-400 font-bold">Origem: ?start={activePlat.tag}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={officialLink}
+                          className="input mono text-xs border-emerald-500/30 bg-[#050b07] text-[#d4f933] font-bold flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(officialLink);
+                            setCopiedSocialLink(true);
+                            setTimeout(() => setCopiedSocialLink(false), 2000);
+                            notify('success', 'Link Copiado!', 'Cole na bio ou stories do seu perfil.');
+                          }}
+                          className="btn-primary shrink-0 bg-emerald-600 text-white hover:bg-emerald-500 border-none text-xs font-bold px-3"
+                        >
+                          {copiedSocialLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copiedSocialLink ? 'Copiado!' : 'Copiar Link'}
+                        </button>
+                        <a
+                          href={officialLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary text-xs shrink-0 flex items-center gap-1"
+                        >
+                          Testar <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Texto de Bio / Post Pronto */}
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
+                        <span>Texto Pronto para a Bio do seu Perfil:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(readyBio);
+                            setCopiedBioText(true);
+                            setTimeout(() => setCopiedBioText(false), 2000);
+                            notify('success', 'Texto da Bio Copiado!', 'Cole diretamente na bio da sua rede social.');
+                          }}
+                          className="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                        >
+                          {copiedBioText ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          {copiedBioText ? 'Bio Copiada!' : 'Copiar Texto da Bio'}
+                        </button>
+                      </div>
+                      <div className="rounded-lg border border-emerald-500/20 bg-[#040805] p-2.5 text-xs text-[#b9d5c6] whitespace-pre-line font-sans">
+                        {readyBio}
+                      </div>
+                    </div>
+
+                    {/* QR Code Rápido */}
+                    <div className="pt-1 flex items-center justify-between border-t border-emerald-500/10">
+                      <button
+                        type="button"
+                        onClick={() => setShowQrCode(!showQrCode)}
+                        className="btn-ghost text-xs text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1.5"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        {showQrCode ? 'Ocultar QR Code' : 'Exibir QR Code para Stories/Artes'}
+                      </button>
+                      <span className="text-[10px] text-[#698274]">
+                        Quando o lead escaneia, a DM destrava direto no Telegram
+                      </span>
+                    </div>
+
+                    {showQrCode && (
+                      <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-emerald-500/30 bg-[#050c08] p-4 text-center sm:text-left">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+                            officialLink
+                          )}&bgcolor=050c08&color=10b981&margin=1`}
+                          alt="QR Code Telegram"
+                          className="h-36 w-36 rounded-xl border border-emerald-500/40 p-1 shadow-lg shadow-emerald-500/10"
+                        />
+                        <div className="space-y-1.5">
+                          <h4 className="text-xs font-bold text-white">QR Code Direto para a DM da Modelo</h4>
+                          <p className="text-[11px] text-[#7d9789] leading-relaxed">
+                            Salve este QR Code para adicionar em fotos, vídeos, stories ou cartazes. Ao apontar a câmera do celular, o lead é jogado direto para o Telegram da modelo com o chat destravado.
+                          </p>
+                          <a
+                            href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(
+                              officialLink
+                            )}&margin=1`}
+                            target="_blank"
+                            download={`qrcode_${openBot.username}_${activePlat.tag}.png`}
+                            rel="noreferrer"
+                            className="btn-secondary text-xs inline-flex items-center gap-1.5"
+                          >
+                            <ExternalLink className="h-3 w-3" /> Baixar Imagem em Alta Resolução (HD)
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>

@@ -39,7 +39,8 @@ import {
   setMyCommands,
   setWebhook,
 } from './telegram.js';
-import { broadcastToAudience, deliverMessage, executeCampaign } from './messaging.js';
+import { broadcastToAudience, deliverMessage, executeCampaign, sendPreviewTeaserNow } from './messaging.js';
+import { DEFAULT_PREVIEW_TEMPLATES } from './previewTemplates.js';
 import { getLocalizedCommands, normalizeLang } from './i18n.js';
 import { registerAdminRoutes, registerPublicRoutes } from './routes.js';
 import { processTelegramUpdate, syncAllBots, syncBotUpdates } from './updates.js';
@@ -406,6 +407,13 @@ app.patch(
           })
         )
         .optional(),
+      previewGroupId: z.string().trim().nullable().optional(),
+      previewGroupTitle: z.string().trim().nullable().optional(),
+      previewGroupInviteLink: z.string().trim().nullable().optional(),
+      previewScheduleMode: z.enum(['interval', 'hours', 'off']).optional(),
+      previewScheduleIntervalHours: z.number().min(1).max(24).optional(),
+      previewScheduleHours: z.array(z.string()).optional(),
+      previewAutoMedia: z.boolean().optional(),
     });
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
@@ -442,11 +450,36 @@ app.patch(
       }
     }
 
+    if (parsed.data.previewGroupId !== undefined) {
+      const groupId = parsed.data.previewGroupId;
+      updates.previewGroupId = groupId;
+      if (groupId && token) {
+        try {
+          const chatInfo = await getChat(token, groupId);
+          updates.previewGroupTitle = chatInfo.title || groupId;
+          if (chatInfo.invite_link) {
+            updates.previewGroupInviteLink = chatInfo.invite_link;
+          }
+        } catch {
+          // Mantém o ID informado
+        }
+      } else if (!groupId) {
+        updates.previewGroupTitle = null;
+        updates.previewGroupInviteLink = null;
+      }
+    }
+
     if (parsed.data.vipChannelTitle !== undefined) updates.vipChannelTitle = parsed.data.vipChannelTitle;
     if (parsed.data.vipInviteLink !== undefined) updates.vipInviteLink = parsed.data.vipInviteLink;
     if (parsed.data.vipRequirements !== undefined) updates.vipRequirements = parsed.data.vipRequirements;
     if (parsed.data.operatingMode !== undefined) updates.operatingMode = parsed.data.operatingMode;
     if (parsed.data.funnelStages !== undefined) updates.funnelStages = parsed.data.funnelStages;
+    if (parsed.data.previewGroupTitle !== undefined) updates.previewGroupTitle = parsed.data.previewGroupTitle;
+    if (parsed.data.previewGroupInviteLink !== undefined) updates.previewGroupInviteLink = parsed.data.previewGroupInviteLink;
+    if (parsed.data.previewScheduleMode !== undefined) updates.previewScheduleMode = parsed.data.previewScheduleMode;
+    if (parsed.data.previewScheduleIntervalHours !== undefined) updates.previewScheduleIntervalHours = parsed.data.previewScheduleIntervalHours;
+    if (parsed.data.previewScheduleHours !== undefined) updates.previewScheduleHours = parsed.data.previewScheduleHours;
+    if (parsed.data.previewAutoMedia !== undefined) updates.previewAutoMedia = parsed.data.previewAutoMedia;
 
     store.updateBot(bot.id, updates);
     const updated = store.getPublicState().bots.find((b) => b.id === bot.id);
@@ -492,6 +525,63 @@ app.post(
     }
   })
 );
+
+app.post(
+  '/api/bots/:id/preview-group/validate',
+  asyncHandler(async (req, res) => {
+    const bot = botOr404(req.params.id, res);
+    if (!bot) return;
+    const token = store.getBotToken(bot.id);
+    if (!token) return res.status(409).json({ error: 'Token ilegível. Reconecte o bot.' });
+
+    const groupId = String(req.body?.groupId || '').trim();
+    if (!groupId) {
+      return res.status(400).json({ error: 'Informe o ID numérico (ex: -100...) ou @username do Grupo de Prévias.' });
+    }
+
+    try {
+      const chat = await getChat(token, groupId);
+      const member = await getChatMember(token, String(chat.id), bot.id).catch(() => null);
+      const membersCount = await getChatMemberCount(token, String(chat.id)).catch(() => 0);
+      const isAdmin = Boolean(member && ['administrator', 'creator'].includes(member.status));
+
+      return res.json({
+        ok: true,
+        group: {
+          id: String(chat.id),
+          title: chat.title || 'Grupo de Prévias',
+          username: chat.username || null,
+          type: chat.type,
+          membersCount,
+          isAdmin,
+          inviteLink: chat.invite_link || null,
+        },
+      });
+    } catch (error) {
+      return res.status(400).json({
+        error: `Não foi possível validar o grupo de prévias: ${normalizeTelegramError(error)}. Certifique-se de que o bot foi adicionado como ADMINISTRADOR.`,
+      });
+    }
+  })
+);
+
+app.post(
+  '/api/bots/:id/preview-group/send-now',
+  asyncHandler(async (req, res) => {
+    const bot = botOr404(req.params.id, res);
+    if (!bot) return;
+    const templateId = typeof req.body?.templateId === 'string' ? req.body.templateId : undefined;
+    const result = await sendPreviewTeaserNow(bot.id, templateId);
+    if (!result.ok) {
+      return res.status(400).json({ error: result.error || 'Falha ao enviar prévia no grupo.' });
+    }
+    return res.json({ ok: true, messageId: result.messageId });
+  })
+);
+
+app.get('/api/preview-templates', (_req, res) => {
+  res.json({ ok: true, templates: DEFAULT_PREVIEW_TEMPLATES });
+});
 
 app.post(
   '/api/bots/:id/sync',

@@ -296,6 +296,23 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
         void checkAndDeliverVipAccess(bot, token, { ...lead, vipTermsAccepted: true }, true);
       } else if (query.data === 'check_vip_access' || query.data === 'vip') {
         void checkAndDeliverVipAccess(bot, token, lead, true);
+      } else if (query.data === 'menu' || query.data === 'planos') {
+        const botLang = normalizeLang(bot.language || lead.languageCode);
+        const menuMsg = getLocalizedMenu(botLang, lead.name, bot.firstName);
+        void replyToLead(bot, token, lead, menuMsg.text, menuMsg.buttons);
+      } else if (query.data === 'teaser_amostra') {
+        const botLang = normalizeLang(bot.language || lead.languageCode);
+        const teaserText =
+          botLang === 'en'
+            ? `🔥 *UNLOCKED DM TEASER PREVIEW*\n\nHere is a private preview just for opening this chat with me... My full uncensored 4K videos, tape archives, and personal WhatsApp are waiting for you inside my VIP:`
+            : botLang === 'es'
+            ? `🔥 *ADELANTO EXCLUSIVO EN DM*\n\nAquí tienes un adelanto privado solo por hablarme directamente... Todos mis vídeos completos sin censura en 4K y mi WhatsApp personal te esperan en mi VIP:`
+            : `🔥 *AMOSTRA EXCLUSIVA DESTRAVADA NA DM*\n\nOlha só essa provinha que eu separei só pra você por ter me chamado no privado... Meus vídeos completos em 4K sem tarja nenhuma, arquivos secretos e meu WhatsApp pessoal te esperam no VIP:`;
+        const teaserButtons = [
+          { text: '💎 QUERO O VIP COMPLETO AGORA', callbackData: 'check_vip_access' },
+          { text: '📋 VER TABELA DE VALORES', callbackData: 'menu' },
+        ];
+        void replyToLead(bot, token, lead, teaserText, teaserButtons);
       }
     }
     markSeen();
@@ -354,6 +371,11 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
   }
 
   const text = messageText(message);
+  const rawParts = text.trim().split(/\s+/);
+  const normalized = rawParts[0]?.toLowerCase() || '';
+  const isStart = normalized === '/start' || normalized.startsWith('/start@');
+  const startParam = isStart && rawParts.length > 1 ? rawParts[1].trim() : null;
+
   const { lead, created } = store.upsertLead({
     botId: bot.id,
     telegramUserId: String(from.id),
@@ -363,6 +385,7 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
     sourceChatTitle: sourceTitle(message),
     languageCode: from.language_code || null,
     lastMessageText: text,
+    trackingSource: startParam || undefined,
   });
 
   store.addMessage({
@@ -386,8 +409,6 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
   restartFollowUpForLead(lead.id);
 
   const settings = store.settings;
-  const normalized = text.trim().toLowerCase().split(/\s+/)[0] || '';
-  const isStart = normalized === '/start' || normalized.startsWith('/start@');
   const isMenu = ['/menu', '/planos', '/planes', '/plans'].includes(normalized) || normalized.startsWith('/menu@');
   const isHelp = ['/ajuda', '/help', '/ayuda', '/suporte', '/support'].includes(normalized) || normalized.startsWith('/ajuda@');
   const isVip = ['/vip', '/acesso', '/canal', '/access', '/entrar'].includes(normalized) || normalized.startsWith('/vip@');
@@ -401,15 +422,68 @@ async function processTelegramUpdateInner(botId: string, update: TelegramUpdate)
       // Validação segura por etapas para liberação do Canal VIP
       await checkAndDeliverVipAccess(bot, token, lead, true);
     } else if (isStart || (!alreadyReplied && created)) {
-      // Mensagem de Boas-Vindas Inteligente no Idioma do Bot
+      // Onboarding Inteligente da DM baseado na Origem do Lead (Link Rastreado)
+      let customText: string | null = null;
+      let customButtons: Array<{ text: string; url?: string; callbackData?: string }> | null = null;
+
+      if (startParam) {
+        const paramLower = startParam.toLowerCase();
+        if (paramLower.includes('previa') || paramLower.includes('free')) {
+          customText =
+            botLang === 'en'
+              ? `🔥 *WELCOME TO MY PRIVATE DM!*\n\nHey babe, so happy you came from my **Preview Group**! That little teaser you saw is nothing compared to what I do in my private VIP... 😏\n\nYour chat with me is completely unlocked here. How do you want to start today?`
+              : botLang === 'es'
+              ? `🔥 *¡BIENVENIDO A MI DM PRIVADO!*\n\n¡Hola amor! Qué delicia que viniste desde mi **Grupo de Adelantos**. Lo que viste allí no es ni el 10% de lo que hago en mi VIP privado... 😏\n\nTu chat conmigo está 100% desbloqueado aquí. ¿Cómo quieres empezar?`
+              : `🔥 *CHAT PRIVADO DESTRAVADO COM SUCESSO!*\n\nOi amor! Vi que você veio do meu **Grupo de Prévias**... que delícia ter você aqui no meu cantinho privado! 🔥🙈\n\nAquilo que você viu lá no grupo grátis não é nem 10% do que eu faço na intimidade do meu VIP com a câmera bem pertinho. Aqui na DM o chat tá 100% liberado pra gente conversar e você ver meus conteúdos sem cortes. Como você quer começar hoje, vida?`;
+          customButtons = [
+            { text: '💎 VER PLANOS VIP & VÍDEOS COMPLETOS', callbackData: 'menu' },
+            { text: '🔞 DESTRAVAR ACESSO VIP (+18)', callbackData: 'check_vip_access' },
+            { text: '📸 PROVAR AMOSTRA SECRETA NA DM', callbackData: 'teaser_amostra' },
+          ];
+        } else if (paramLower.includes('insta')) {
+          customText =
+            botLang === 'en'
+              ? `💋 *DIRECT FROM INSTAGRAM TO MY DM!*\n\nHey sweetie! Thank you for clicking my link in bio. Instagram censors everything, but here in my Telegram VIP there are NO limits and NO filters! Tap below to unlock full access:`
+              : botLang === 'es'
+              ? `💋 *¡DIRECTO DE INSTAGRAM A MI DM!*\n\n¡Hola vida! Gracias por hacer clic en el enlace de mi biografía. En Instagram lo censuran todo, pero aquí en mi VIP de Telegram no hay límites. Toca abajo para ver mis planes:`
+              : `💋 *DIRETO DO INSTAGRAM PRA MINHA DM!*\n\nOi vida! Que bom que você clicou no link da minha bio... Lá na rede vizinha eles barram tudo e colocam censura em qualquer foto provocativa, mas aqui no meu VIP não tem limite nem filtro! Já destravei o seu atendimento na DM com desconto especial pra você:`;
+          customButtons = [
+            { text: '💎 CONHECER PLANOS VIP', callbackData: 'menu' },
+            { text: '🔞 ENTRAR NO VIP AGORA', callbackData: 'check_vip_access' },
+          ];
+        } else if (paramLower.includes('tiktok')) {
+          customText =
+            botLang === 'en'
+              ? `🎬 *FROM TIKTOK TO MY SECRET DM!*\n\nYou found me on TikTok and made it all the way here! On TikTok they cut everything, but here you get my raw, naughty side. Check my VIP plans below:`
+              : botLang === 'es'
+              ? `🎬 *¡DE TIKTOK A MI DM SECRETO!*\n\n¡Me encontraste en TikTok y llegaste hasta aquí! En TikTok lo censuran todo, pero aquí tienes mi lado más travieso y sin cortes:`
+              : `🎬 *DO TIKTOK PRA MINHA DM SECRETA!*\n\nOi gatinho! Você me achou no TikTok e veio até aqui... adorei a sua coragem! 😈 Lá eles cortam tudo, mas aqui na minha DM você tem o meu lado mais safado, sem censura e com atendimento direto comigo:`;
+          customButtons = [
+            { text: '💎 VER MEUS VÍDEOS COMPLETOS', callbackData: 'menu' },
+            { text: '🔞 DESTRAVAR MEU VIP (+18)', callbackData: 'check_vip_access' },
+          ];
+        } else if (paramLower.includes('promo') || paramLower.includes('desconto')) {
+          customText =
+            `🎁 *CUPOM DE 30% OFF ATIVADO COM SUCESSO!*\n\nVocê destravou a tabela promocional exclusiva com desconto imediato para todos os meus planos VIP + Chamada de Vídeo Privada! Escolha abaixo antes que expire:`;
+          customButtons = [
+            { text: '🎁 VER PLANOS COM 30% OFF', callbackData: 'menu' },
+            { text: '🔞 DESTRAVAR VIP AGORA', callbackData: 'check_vip_access' },
+          ];
+        }
+      }
+
       const localized = getLocalizedWelcome(botLang, lead.name, bot.firstName, bot.username);
-      const textToSend = settings.welcomeMessage.trim()
+      const textToSend = customText || (settings.welcomeMessage.trim()
         ? renderWelcome(settings.welcomeMessage, lead, bot)
-        : localized.text;
-      const sent = await replyToLead(bot, token, lead, textToSend, localized.buttons);
+        : localized.text);
+      const buttonsToSend = customButtons || localized.buttons;
+
+      const sent = await replyToLead(bot, token, lead, textToSend, buttonsToSend);
       if (sent) {
         store.updateLead(lead.id, {
-          tags: Array.from(new Set([...(existingLead?.tags || []), 'boas-vindas-enviada'])),
+          tags: Array.from(new Set([...(existingLead?.tags || []), 'boas-vindas-enviada', 'dm-destravada'])),
+          dmUnlocked: true,
+          dmUnlockedAt: new Date().toISOString(),
         });
       }
     } else if (isMenu) {

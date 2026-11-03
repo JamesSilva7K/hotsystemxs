@@ -4,6 +4,7 @@ import {
   normalizeTelegramError,
   sendRichMessage,
 } from './telegram.js';
+import { DEFAULT_PREVIEW_TEMPLATES } from './previewTemplates.js';
 
 const MAX_BROADCAST = 100;
 const MAX_CAMPAIGN = 300;
@@ -246,6 +247,86 @@ export async function runDueCampaigns(now = new Date()): Promise<{
   return { executed, sent, failed, expired };
 }
 
+export async function sendPreviewTeaserNow(
+  botId: string,
+  templateId?: string
+): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  const bot = store.findBot(botId);
+  if (!bot) return { ok: false, error: 'Bot não encontrado.' };
+  if (!bot.previewGroupId) {
+    return { ok: false, error: 'Grupo de prévias não configurado para este bot.' };
+  }
+
+  const template =
+    DEFAULT_PREVIEW_TEMPLATES.find((t) => t.id === templateId) ||
+    DEFAULT_PREVIEW_TEMPLATES[Math.floor(Math.random() * DEFAULT_PREVIEW_TEMPLATES.length)];
+
+  const startTag = template.suggestedTag || 'previas_free';
+  const ctaUrl = `https://t.me/${bot.username}?start=${startTag}`;
+
+  const sendRes = await deliverMessage(bot.id, bot.previewGroupId, template.body, {
+    buttons: [
+      {
+        text: template.ctaText || '👉 FALAR COM A MODELO NA DM',
+        url: ctaUrl,
+      },
+    ],
+  });
+
+  if (sendRes.ok) {
+    store.updateBot(bot.id, { previewLastSentAt: new Date().toISOString() });
+  }
+
+  return sendRes;
+}
+
+export async function runDuePreviewMessages(now = new Date()): Promise<{ checked: number; sent: number }> {
+  let sent = 0;
+  const botsWithPreview = store.rawBots.filter(
+    (b) => b.previewGroupId && b.previewScheduleMode && b.previewScheduleMode !== 'off'
+  );
+
+  for (const bot of botsWithPreview) {
+    const mode = bot.previewScheduleMode;
+    const lastSent = bot.previewLastSentAt ? new Date(bot.previewLastSentAt).getTime() : 0;
+    let isDue = false;
+
+    if (mode === 'interval') {
+      const intervalMs = (bot.previewScheduleIntervalHours || 4) * 3_600_000;
+      isDue = now.getTime() - lastSent >= intervalMs;
+    } else if (mode === 'hours') {
+      const timeStr = new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo',
+      }).format(now);
+
+      const notRecentlySent = now.getTime() - lastSent > 45 * 60_000;
+      const hoursList = bot.previewScheduleHours || ['12:00', '18:00', '22:30'];
+      const matchesHour = hoursList.some((h) => {
+        const [targetH, targetM] = h.split(':').map(Number);
+        const [nowH, nowM] = timeStr.split(':').map(Number);
+        return Math.abs((targetH * 60 + targetM) - (nowH * 60 + nowM)) <= 2;
+      });
+      isDue = notRecentlySent && matchesHour;
+    }
+
+    if (isDue) {
+      try {
+        const res = await sendPreviewTeaserNow(bot.id);
+        if (res.ok) {
+          sent += 1;
+          console.log(`[preview-schedule] Prévia automática disparada com sucesso no grupo ${bot.previewGroupId} pelo bot @${bot.username}`);
+        }
+      } catch (err) {
+        console.error(`[preview-schedule] Falha ao enviar prévia para @${bot.username}:`, err);
+      }
+    }
+  }
+
+  return { checked: botsWithPreview.length, sent };
+}
+
 export function startScheduler(): void {
   if (timer) return;
   const tick = async () => {
@@ -253,6 +334,7 @@ export function startScheduler(): void {
     ticking = true;
     try {
       await runDueCampaigns();
+      await runDuePreviewMessages();
     } catch (error) {
       console.error('[scheduler] erro:', error);
     } finally {
