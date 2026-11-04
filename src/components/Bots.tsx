@@ -49,7 +49,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import type { AppState, BotFunnelStageConfig, BotOperatingMode } from '@shared/types';
+import type { AppState, BotFunnelStageConfig, BotOperatingMode, MessageTemplate, TemplateCategory } from '@shared/types';
 import { api } from '../lib/api';
 import { formatBRL, formatFullDate, formatNumber, relativeTime } from '../lib/format';
 import { Avatar } from './Avatar';
@@ -58,6 +58,8 @@ import { Dot } from './StatusBadge';
 import { useToast } from './Toast';
 import { FlagBrasil, FlagEspanha, FlagUSA, LanguageSelector, type LanguageCode } from './LanguageSelector';
 import type { NavTab } from '../lib/nav';
+import { MessageTemplateBuilder } from './MessageTemplateBuilder';
+import { MessageTemplateCard } from './MessageTemplateCard';
 
 function IconTikTok({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
@@ -287,6 +289,12 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
     'dm_welcome' | 'plans_upsell' | 'preview_group' | 'recovery' | 'vip_channel' | 'bio_profile'
   >('dm_welcome');
   const [smartPreviewMode, setSmartPreviewMode] = useState<'telegram' | 'mobile_bio'>('telegram');
+
+  // Estados do MessageTemplateBuilder
+  const [templateBuilderOpen, setTemplateBuilderOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [templateBuilderCategory, setTemplateBuilderCategory] = useState<TemplateCategory>('oferta');
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
   const [activePreviewCopy, setActivePreviewCopy] = useState<{
     title: string;
     body: string;
@@ -528,6 +536,72 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
       notify('error', 'Erro ao disparar', err instanceof Error ? err.message : 'Tente novamente.');
     } finally {
       setSendingPreviewTeaser(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (template: MessageTemplate) => {
+    try {
+      await api.deleteTemplate(template.id);
+      notify('success', 'Modelo Removido', `O modelo "${template.name}" foi excluído.`);
+      await refresh();
+    } catch (err) {
+      notify('error', 'Erro ao excluir', err instanceof Error ? err.message : 'Tente novamente.');
+    }
+  };
+
+  const handleDuplicateTemplate = async (template: MessageTemplate) => {
+    try {
+      await api.createTemplate({
+        name: `${template.name} (Cópia)`,
+        category: template.category,
+        body: template.body,
+        buttons: template.buttons,
+        mediaUrl: template.mediaUrl,
+        mediaType: template.mediaType,
+        mediaMode: template.mediaMode,
+        mediaGrid: template.mediaGrid,
+        weight: template.weight,
+        active: template.active,
+        tags: template.tags,
+      });
+      notify('success', 'Modelo Duplicado', `Uma cópia de "${template.name}" foi criada com sucesso.`);
+      await refresh();
+    } catch (err) {
+      notify('error', 'Erro ao duplicar', err instanceof Error ? err.message : 'Tente novamente.');
+    }
+  };
+
+  const handleFireTemplateToGroup = async (template: MessageTemplate) => {
+    if (!openBot) return;
+    const targetChatId = openBot.previewGroupId || previewGroupInput.trim();
+    if (!targetChatId) {
+      notify('error', 'Sem Grupo de Prévias', 'Vincule um grupo de prévias antes de disparar modelos.');
+      return;
+    }
+    try {
+      const res = await api.sendMessage({
+        botId: openBot.id,
+        chatId: targetChatId,
+        text: template.body,
+        imageUrl: template.mediaUrl || undefined,
+        mediaType: template.mediaType && template.mediaType !== 'none' ? template.mediaType : undefined,
+        buttons:
+          template.buttons && template.buttons.length > 0
+            ? template.buttons.map((b) => ({
+                text: b.text,
+                url: b.url || undefined,
+                callbackData: b.callbackData || undefined,
+              }))
+            : undefined,
+      });
+      if (res.ok) {
+        notify('success', 'Modelo Disparado 100% Real!', `"${template.name}" foi postado no grupo do Telegram.`);
+        await refresh();
+      } else {
+        notify('error', 'Falha no Envio', res.error || 'Verifique se o bot é administrador do canal/grupo.');
+      }
+    } catch (err) {
+      notify('error', 'Erro ao disparar', err instanceof Error ? err.message : 'Falha na conexão com Telegram API.');
     }
   };
   const webhookBase = state.server.publicBaseUrl || state.settings.publicBaseUrl;
@@ -1635,15 +1709,28 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                       <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
                         Modelos de Mensagem de Prévia (Alta Conversão):
                       </span>
-                      <button
-                        type="button"
-                        onClick={handleSendTeaserNow}
-                        disabled={sendingPreviewTeaser || !openBot.previewGroupId}
-                        className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50 inline-flex items-center gap-1.5"
-                      >
-                        {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                        Disparar Prévia Agora
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTemplate(null);
+                            setTemplateBuilderCategory('oferta');
+                            setTemplateBuilderOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Criar Novo Modelo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendTeaserNow}
+                          disabled={sendingPreviewTeaser || !openBot.previewGroupId}
+                          className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50 inline-flex items-center gap-1.5"
+                        >
+                          {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                          Disparar Prévia Agora
+                        </button>
+                      </div>
                     </div>
 
                     {/* Seletor de Templates de Prévia */}
@@ -1691,6 +1778,49 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                         </div>
                       ))}
                     </div>
+
+                    {/* Modelos Customizados Criados pelo Admin */}
+                    {state.templates && state.templates.length > 0 && (
+                      <div className="pt-3 border-t border-amber-500/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Seus Modelos Salvos no Sistema ({state.templates.length}):
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTemplate(null);
+                              setTemplateBuilderCategory('oferta');
+                              setTemplateBuilderOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-amber-400 hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" /> Criar Mais
+                          </button>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {state.templates.map((tpl) => (
+                            <MessageTemplateCard
+                              key={tpl.id}
+                              template={tpl}
+                              accentColor="amber"
+                              onEdit={(t) => {
+                                setEditingTemplate(t);
+                                setTemplateBuilderCategory(t.category);
+                                setTemplateBuilderOpen(true);
+                              }}
+                              onDelete={handleDeleteTemplate}
+                              onDuplicate={handleDuplicateTemplate}
+                              onFire={handleFireTemplateToGroup}
+                              onCopyBody={(t) => {
+                                void navigator.clipboard.writeText(t.body);
+                                notify('success', 'Texto Copiado!', 'Corpo da mensagem copiado para a área de transferência.');
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1714,16 +1844,29 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpenBotId(null);
-                        onNavigate('campaigns');
-                      }}
-                      className="btn-ghost text-xs text-emerald-400 hover:underline flex items-center gap-1"
-                    >
-                      Automações & Disparos <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingTemplate(null);
+                          setTemplateBuilderCategory('recuperacao');
+                          setTemplateBuilderOpen(true);
+                        }}
+                        className="btn-primary bg-emerald-600 text-white hover:bg-emerald-500 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-emerald-600/30 inline-flex items-center gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Novo Modelo de Recuperação
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenBotId(null);
+                          onNavigate('campaigns');
+                        }}
+                        className="btn-ghost text-xs text-emerald-400 hover:underline flex items-center gap-1"
+                      >
+                        Automações & Disparos <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1923,6 +2066,53 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                       </button>
                     </div>
                   </div>
+
+                  {/* Seção de Modelos Customizados de Recuperação */}
+                  {state.templates &&
+                    state.templates.filter((t) => t.category === 'recuperacao' || t.category === 'reengajamento').length > 0 && (
+                      <div className="pt-3 border-t border-emerald-500/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> Seus Modelos de Recuperação Personalizados (
+                            {state.templates.filter((t) => t.category === 'recuperacao' || t.category === 'reengajamento').length}
+                            ):
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTemplate(null);
+                              setTemplateBuilderCategory('recuperacao');
+                              setTemplateBuilderOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" /> Criar Mais
+                          </button>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {state.templates
+                            .filter((t) => t.category === 'recuperacao' || t.category === 'reengajamento')
+                            .map((tpl) => (
+                              <MessageTemplateCard
+                                key={tpl.id}
+                                template={tpl}
+                                accentColor="emerald"
+                                onEdit={(t) => {
+                                  setEditingTemplate(t);
+                                  setTemplateBuilderCategory(t.category);
+                                  setTemplateBuilderOpen(true);
+                                }}
+                                onDelete={handleDeleteTemplate}
+                                onDuplicate={handleDuplicateTemplate}
+                                onCopyBody={(t) => {
+                                  void navigator.clipboard.writeText(t.body);
+                                  notify('success', 'Texto Copiado!', 'Corpo da mensagem copiado.');
+                                }}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
 
                 {/* Simulador Inteligente de Preview (Multi-Modo & Detecção de Conteúdo) */}
@@ -2428,6 +2618,21 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
           </div>
         )}
       </Modal>
+
+      {/* Editor & Criador Completo de Modelos de Mensagem com Imagens, Vídeos, GIFs e Botões */}
+      <MessageTemplateBuilder
+        open={templateBuilderOpen}
+        onClose={() => {
+          setTemplateBuilderOpen(false);
+          setEditingTemplate(null);
+        }}
+        onSaved={async (saved) => {
+          notify('success', 'Modelo Salvo 100% Real!', `"${saved.name}" foi salvo e sincronizado com o sistema.`);
+          await refresh();
+        }}
+        editTemplate={editingTemplate}
+        defaultCategory={templateBuilderCategory}
+      />
     </div>
   );
 }
