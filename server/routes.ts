@@ -98,6 +98,46 @@ export function registerPublicRoutes(app: Express): void {
   });
   app.get('/api/cron/tick', cronHandler);
   app.post('/api/cron/tick', cronHandler);
+
+  // ---------- Rotas Públicas dos Perfis / Bio Links das Modelos (/p/:slug) ----------
+  app.get(
+    '/api/public/profiles/:slug',
+    asyncHandler(async (req, res) => {
+      const slug = String(req.params.slug || '').trim();
+      const profile = store.findProfileBySlug(slug);
+      if (!profile) {
+        return res.status(404).json({ error: 'Perfil não encontrado.' });
+      }
+      const isUnique = req.query.unique === '1' || req.headers['x-unique-visit'] === '1';
+      const updated = store.recordProfileView(slug, isUnique);
+      return res.json({ ok: true, profile: updated || profile });
+    })
+  );
+
+  app.post(
+    '/api/public/profiles/:slug/click',
+    asyncHandler(async (req, res) => {
+      const slug = String(req.params.slug || '').trim();
+      const buttonId = String(req.body?.buttonId || '').trim();
+      if (!buttonId) {
+        return res.status(400).json({ error: 'buttonId é obrigatório.' });
+      }
+      const result = store.recordProfileClick(slug, buttonId);
+      if (!result) {
+        return res.status(404).json({ error: 'Perfil ou botão não encontrado.' });
+      }
+      return res.json({ ok: true, clicks: result.button.clicks });
+    })
+  );
+
+  app.post(
+    '/api/public/profiles/:slug/exit',
+    asyncHandler(async (req, res) => {
+      const slug = String(req.params.slug || '').trim();
+      store.recordProfileExit(slug);
+      return res.json({ ok: true });
+    })
+  );
 }
 
 // ---------- Rotas administrativas ----------
@@ -621,6 +661,90 @@ export function registerAdminRoutes(app: Express): void {
       if (!lead) return res.status(404).json({ error: 'Lead não encontrado.' });
       restartFollowUpForLead(lead.id);
       return res.json({ ok: true, lead: store.findLeadById(lead.id) });
+    })
+  );
+
+  // ---------- Gerenciamento dos Perfis / Bio Links das Modelos ----------
+  const profileButtonSchema = z.object({
+    id: z.string().optional(),
+    title: z.string().trim().min(1, 'Título do botão é obrigatório.').max(100),
+    subtitle: z.string().trim().max(150).optional(),
+    url: z.string().trim().min(1, 'URL é obrigatória.'),
+    imageUrl: z.string().trim().optional(),
+    badge: z.string().trim().max(40).optional(),
+    clicks: z.number().int().nonnegative().optional(),
+    order: z.number().int().optional(),
+    active: z.boolean().optional(),
+  });
+
+  const createProfileSchema = z.object({
+    botId: z.string().min(1, 'Selecione o bot Telegram vinculado.'),
+    slug: z.string().trim().min(2, 'Slug precisa ter pelo menos 2 caracteres.').max(60),
+    name: z.string().trim().min(1, 'Nome da modelo é obrigatório.').max(100),
+    verified: z.boolean().optional(),
+    handle: z.string().trim().min(1, 'Handle/Instagram/TikTok é obrigatório.').max(50),
+    bio: z.string().trim().max(500).optional(),
+    followersCount: z.string().trim().max(30).optional(),
+    bannerUrl: z.string().trim().min(1, 'Foto de capa (banner) é obrigatória.'),
+    avatarUrl: z.string().trim().optional(),
+    overlayGradient: z.enum(['dark-fade', 'smooth-black', 'violet-glow', 'rose-glow']).optional(),
+    socialLinks: z
+      .object({
+        instagram: z.string().trim().optional(),
+        tiktok: z.string().trim().optional(),
+        telegram: z.string().trim().optional(),
+        twitter: z.string().trim().optional(),
+        whatsapp: z.string().trim().optional(),
+      })
+      .optional(),
+    buttons: z.array(profileButtonSchema).optional(),
+    active: z.boolean().optional(),
+  });
+
+  app.post(
+    '/api/profiles',
+    asyncHandler(async (req, res) => {
+      const parsed = createProfileSchema.safeParse(req.body || {});
+      if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
+      const profile = store.upsertProfile(parsed.data);
+      return res.json({ ok: true, profile });
+    })
+  );
+
+  app.patch(
+    '/api/profiles/:id',
+    asyncHandler(async (req, res) => {
+      const id = String(req.params.id || '').trim();
+      const existing = store.findProfile(id);
+      if (!existing) return res.status(404).json({ error: 'Perfil não encontrado.' });
+      const parsed = createProfileSchema.partial().safeParse(req.body || {});
+      if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error) });
+      const profile = store.upsertProfile({
+        botId: parsed.data.botId || existing.botId,
+        slug: parsed.data.slug || existing.slug,
+        name: parsed.data.name || existing.name,
+        handle: parsed.data.handle || existing.handle,
+        bannerUrl: parsed.data.bannerUrl || existing.bannerUrl,
+        verified: parsed.data.verified ?? existing.verified,
+        bio: parsed.data.bio ?? existing.bio,
+        followersCount: parsed.data.followersCount || existing.followersCount,
+        avatarUrl: parsed.data.avatarUrl ?? existing.avatarUrl,
+        overlayGradient: parsed.data.overlayGradient || existing.overlayGradient,
+        socialLinks: parsed.data.socialLinks || existing.socialLinks,
+        buttons: parsed.data.buttons || existing.buttons,
+        active: parsed.data.active ?? existing.active,
+        id,
+      });
+      return res.json({ ok: true, profile });
+    })
+  );
+
+  app.delete(
+    '/api/profiles/:id',
+    asyncHandler(async (req, res) => {
+      const id = String(req.params.id || '').trim();
+      const ok = store.removeProfile(id);
+      return res.json({ ok });
     })
   );
 }

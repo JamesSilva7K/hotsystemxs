@@ -4,6 +4,7 @@ import {
   CalendarClock,
   CreditCard,
   FileVideo,
+  Globe,
   LayoutDashboard,
   Menu,
   MoreHorizontal,
@@ -27,6 +28,7 @@ const icons = {
   dashboard: LayoutDashboard,
   bots: Bot,
   leads: Users,
+  profiles: Globe,
   messages: Send,
   studio: FileVideo,
   automacao: Sparkles,
@@ -36,7 +38,7 @@ const icons = {
 };
 
 const MAIN_MOBILE_TABS: NavTab[] = ['dashboard', 'bots', 'leads', 'vendas'];
-const MORE_MOBILE_TABS: NavTab[] = ['messages', 'studio', 'automacao', 'campaigns', 'settings'];
+const MORE_MOBILE_TABS: NavTab[] = ['profiles', 'messages', 'studio', 'automacao', 'campaigns', 'settings'];
 
 export function Sidebar({ activeTab, onChange, newLeads }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

@@ -11,12 +11,14 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Globe,
   Hash,
   KeyRound,
   Link2,
   Loader2,
   Lock,
   MessageSquare,
+  MousePointerClick,
   Plus,
   QrCode,
   Radio,
@@ -35,7 +37,7 @@ import {
 } from 'lucide-react';
 import type { AppState, BotFunnelStageConfig, BotOperatingMode } from '@shared/types';
 import { api } from '../lib/api';
-import { formatFullDate, formatNumber, relativeTime } from '../lib/format';
+import { formatBRL, formatFullDate, formatNumber, relativeTime } from '../lib/format';
 import { Avatar } from './Avatar';
 import { Modal } from './Modal';
 import { Dot } from './StatusBadge';
@@ -238,6 +240,9 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const [copiedSocialLink, setCopiedSocialLink] = useState(false);
   const [copiedBioText, setCopiedBioText] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
+  const [botModalCategory, setBotModalCategory] = useState<
+    'dm_welcome' | 'plans_upsell' | 'preview_group' | 'recovery' | 'vip_channel' | 'bio_profile'
+  >('dm_welcome');
 
   const openBot = state.bots.find((bot) => bot.id === openBotId) || null;
 
@@ -836,912 +841,1292 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               </div>
             )}
 
-            {/* Configuração de Idioma e Nicho do Bot Ativo */}
-            <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#8da0b6]">
-                Idioma de Atendimento & Comunicação da Modelo
-              </label>
-              <p className="mt-0.5 text-xs text-[#718096]">
-                A modelo responderá leads automaticamente neste idioma em todas as boas-vindas, comandos (/start, /menu, /ajuda) e conversas.
-              </p>
-              <div className="mt-2.5 max-w-xs">
-                <LanguageSelector
-                  value={(openBot.language as LanguageCode) || 'pt'}
-                  onChange={async (newLang) => {
-                    try {
-                      await api.updateBot(openBot.id, { language: newLang });
-                      notify(
-                        'success',
-                        'Idioma Atualizado!',
-                        `A modelo agora se comunica em ${
-                          newLang === 'en' ? 'Inglês (EUA)' : newLang === 'es' ? 'Espanhol' : 'Português (Brasil)'
-                        }.`
-                      );
-                      await refresh();
-                    } catch (err) {
-                      notify('error', 'Falha ao alterar idioma', err instanceof Error ? err.message : 'Tente novamente.');
-                    }
-                  }}
-                />
-              </div>
+            {/* Categorias de Configuração & Operação do Bot 🎛️ */}
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[#202738] bg-[#0c0f16] p-1.5 shadow-md">
+              {[
+                { id: 'dm_welcome', label: '1. Boas-Vindas & DM', icon: '💬' },
+                { id: 'plans_upsell', label: '2. Planos & Upsell', icon: '💎' },
+                { id: 'preview_group', label: '3. Grupo de Prévias', icon: '🔞' },
+                { id: 'recovery', label: '4. Recuperação', icon: '⚡' },
+                { id: 'vip_channel', label: '5. Canal VIP', icon: '🛡️' },
+                { id: 'bio_profile', label: '6. Bio Link / Perfil', icon: '🌐' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setBotModalCategory(cat.id as typeof botModalCategory)}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${
+                    botModalCategory === cat.id
+                      ? 'bg-[#d4f933] text-black shadow-md shadow-[#d4f933]/20'
+                      : 'text-[#8594ab] hover:bg-[#151a24] hover:text-white'
+                  }`}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
             </div>
 
-            {/* Modo de Operação & Pipeline de Etapas do Bot 🎛️ */}
-            <div className="space-y-4 rounded-2xl border border-[#232d3d] bg-[#10141d] p-4 shadow-md">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1b2330] pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
-                    <SlidersHorizontal className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                      Modo de Operação & Pipeline do Bot
-                    </h3>
-                    <p className="text-[11px] text-[#718096]">
-                      Escolha como a modelo se comporta no Telegram e selecione as etapas do funil que o bot executará.
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-full border border-[#d4f933]/30 bg-[#d4f933]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#d4f933]">
-                  {operatingMode === 'conversational_sales'
-                    ? 'Conversacional & Vendas'
-                    : operatingMode === 'strict_funnel'
-                    ? 'Funil Estrito VIP'
-                    : 'Apenas Transmissão'}
-                </span>
-              </div>
-
-              {/* Seletor de Modo de Operação */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da0b6]">
-                  Modo de Operação Ativo:
-                </label>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleChangeOperatingMode('conversational_sales')}
-                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
-                      operatingMode === 'conversational_sales'
-                        ? 'border-[#d4f933] bg-[#d4f933]/10 text-white shadow-[0_0_15px_rgba(212,249,51,0.15)]'
-                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                        <MessageSquare className="h-3.5 w-3.5 text-[#d4f933]" />
-                        Conversacional
-                      </div>
-                      <span className="rounded bg-[#d4f933]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#d4f933]">
-                        🔥 Mais Vendas
-                      </span>
-                    </div>
-                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
-                      A modelo cria conexão íntima, envia amostras e conduz o lead para compra naturalmente.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleChangeOperatingMode('strict_funnel')}
-                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
-                      operatingMode === 'strict_funnel'
-                        ? 'border-purple-500 bg-purple-500/15 text-white shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                        <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
-                        Funil Estrito VIP
-                      </div>
-                      <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-bold text-purple-300">
-                        🛡️ Blindado
-                      </span>
-                    </div>
-                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
-                      Passo a passo rígido: exige maioridade +18 e pagamento antes de liberar qualquer mídia ou acesso.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleChangeOperatingMode('broadcast_only')}
-                    className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
-                      operatingMode === 'broadcast_only'
-                        ? 'border-amber-400 bg-amber-400/10 text-white shadow-[0_0_15px_rgba(251,191,36,0.15)]'
-                        : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                        <Radio className="h-3.5 w-3.5 text-amber-400" />
-                        Transmissão
-                      </div>
-                      <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
-                        📢 Disparo
-                      </span>
-                    </div>
-                    <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
-                      Não responde chats 1-a-1. Focado puramente em disparos e campanhas em massa nos canais/grupos.
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Pipeline de Etapas Interativo */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da0b6]">
-                    Pipeline de Etapas do Lead (Ative ou Desative em 1 Clique):
+            {/* CONTEÚDO CATEGORIZADO */}
+            {/* 1. Boas-Vindas & DM */}
+            {botModalCategory === 'dm_welcome' && (
+              <div className="space-y-4">
+                {/* Configuração de Idioma e Nicho do Bot Ativo */}
+                <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#8da0b6]">
+                    Idioma de Atendimento & Comunicação da Modelo
                   </label>
-                  <span className="text-[10px] text-[#637286]">
-                    {funnelStages.filter((s) => s.enabled).length} de {funnelStages.length} etapas ativas
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {funnelStages.map((stage) => (
-                    <div
-                      key={stage.id}
-                      onClick={() => void handleToggleFunnelStage(stage.id)}
-                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-2.5 transition ${
-                        stage.enabled
-                          ? 'border-[#2a374a] bg-[#121824] hover:border-[#d4f933]/40'
-                          : 'border-[#1b222d] bg-[#0a0d13] opacity-60 hover:opacity-90'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-bold ${
-                            stage.enabled ? 'bg-[#d4f933]/20 text-[#d4f933]' : 'bg-[#1a222f] text-[#556379]'
-                          }`}
-                        >
-                          0{stage.order}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold ${stage.enabled ? 'text-white' : 'text-[#7f8da0]'}`}>
-                              {stage.name}
-                            </span>
-                            <span
-                              className={`rounded px-1.5 py-0.2 text-[9px] font-medium ${
-                                stage.enabled
-                                  ? 'border border-[#d4f933]/30 bg-[#d4f933]/10 text-[#d4f933]'
-                                  : 'border border-[#2a3446] bg-[#171d28] text-[#5e6c80]'
-                              }`}
-                            >
-                              {stage.enabled ? 'Ativa no Bot' : 'Pausada'}
-                            </span>
-                          </div>
-                          <p className="truncate text-[10px] text-[#6d7b8f]">{stage.description}</p>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0 text-right">
-                        {stage.enabled ? (
-                          <ToggleRight className="h-6 w-6 text-[#d4f933] transition" />
-                        ) : (
-                          <ToggleLeft className="h-6 w-6 text-[#455266] transition" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">Ações do bot</h3>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => void refreshBot(openBot.id)}
-                  disabled={busy === `refresh-${openBot.id}`}
-                  className="btn-secondary justify-start text-xs"
-                >
-                  <RefreshCw className={`h-4 w-4 ${busy === `refresh-${openBot.id}` ? 'animate-spin' : ''}`} />
-                  Atualizar dados oficiais
-                </button>
-                {!openBot.webhookUrl && (
-                  <button
-                    type="button"
-                    onClick={() => void syncBot(openBot.id)}
-                    disabled={busy === `sync-${openBot.id}`}
-                    className="btn-secondary justify-start text-xs"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${busy === `sync-${openBot.id}` ? 'animate-spin' : ''}`} />
-                    Buscar atualizações agora
-                  </button>
-                )}
-                {openBot.webhookUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => void removeWebhook(openBot.id)}
-                    disabled={busy === `unwebhook-${openBot.id}`}
-                    className="btn-secondary justify-start text-xs"
-                  >
-                    <X className="h-4 w-4" /> Remover webhook
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void setWebhook(openBot.id)}
-                    disabled={busy === `webhook-${openBot.id}` || !/^https:\/\//i.test(webhookBase)}
-                    className="btn-secondary justify-start text-xs disabled:opacity-50"
-                    title={
-                      /^https:\/\//i.test(webhookBase)
-                        ? 'Ativar webhook HTTPS'
-                        : 'Configure uma URL pública HTTPS em Ajustes'
-                    }
-                  >
-                    <Webhook className="h-4 w-4" /> Ativar webhook
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void installCommands(openBot.id)}
-                  disabled={busy === `commands-${openBot.id}`}
-                  className="btn-secondary justify-start text-xs"
-                >
-                  <Command className="h-4 w-4" /> Instalar comandos
-                </button>
-              </div>
-              {!openBot.webhookUrl && !/^https:\/\//i.test(webhookBase) && (
-                <button
-                  type="button"
-                  onClick={() => onNavigate('settings')}
-                  className="mt-2 text-[11px] font-medium text-[#d4f933] hover:underline"
-                >
-                  Configurar URL pública para usar webhook →
-                </button>
-              )}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[#252e3f] bg-[#0d1017] p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f7c91]">Webhook</div>
-                <div className="mono mt-1 break-all text-[11px] leading-relaxed text-[#aab5c6]">
-                  {openBot.webhookUrl || 'Não configurado · long polling ativo'}
-                </div>
-                {openBot.webhookUrl && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(openBot.webhookUrl || '');
-                      setCopied(true);
-                      window.setTimeout(() => setCopied(false), 1500);
-                    }}
-                    className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#d4f933]"
-                  >
-                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {copied ? 'Copiado' : 'Copiar URL'}
-                  </button>
-                )}
-              </div>
-              <div className="rounded-2xl border border-[#252e3f] bg-[#0d1017] p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f7c91]">Capacidades</div>
-                <div className="mt-2 space-y-1.5 text-[11px] text-[#a3aec0]">
-                  <div className="flex items-center justify-between"><span>Entrar em grupos</span><span className="text-[#d4f933]">{openBot.canJoinGroups ? 'Sim' : 'Não'}</span></div>
-                  <div className="flex items-center justify-between"><span>Ler mensagens</span><span className="text-[#d4f933]">{openBot.canReadAllGroupMessages ? 'Todas' : 'Comandos'}</span></div>
-                  <div className="flex items-center justify-between"><span>Inline queries</span><span className="text-[#d4f933]">{openBot.supportsInlineQueries ? 'Sim' : 'Não'}</span></div>
-                  <div className="flex items-center justify-between"><span>Updates pendentes</span><span className="text-[#d4f933]">{openBot.pendingUpdates}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">
-                  Comunidades vinculadas ({botChats.length})
-                </h3>
-              </div>
-              <form onSubmit={addChat} className="mb-3 flex gap-2">
-                <div className="relative min-w-0 flex-1">
-                  <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#68758b]" />
-                  <input
-                    value={newChatId}
-                    onChange={(event) => setNewChatId(event.target.value)}
-                    className="input mono pl-9 text-xs"
-                    placeholder="-1001234567890 ou @canal"
-                    aria-label="ID do canal ou grupo"
-                  />
-                </div>
-                <button type="submit" disabled={busy === 'add-chat' || !newChatId.trim()} className="btn-primary shrink-0 text-xs">
-                  {busy === 'add-chat' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                  Vincular
-                </button>
-              </form>
-              {botChats.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#293246] p-4 text-center text-[11px] text-[#748196]">
-                  Nenhum canal ou grupo vinculado. Adicione o bot como administrador e informe o ID acima.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {botChats.map((chat) => (
-                    <div key={chat.id} className="flex items-center gap-3 rounded-xl border border-[#252e3f] bg-[#0d1017] p-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1a202c] text-[#d4f933]">
-                        <Hash className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-semibold text-white">{chat.title}</div>
-                        <div className="mono truncate text-[10px] text-[#6f7c91]">
-                          {chat.telegramChatId} · {formatNumber(chat.membersCount)} membros
-                        </div>
-                      </div>
-                      <span className={`badge ${chat.isAdmin ? 'border-[#d4f933]/25 bg-[#d4f933]/10 text-[#d4f933]' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}>
-                        {chat.isAdmin ? 'Admin' : 'Membro'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => void removeChat(chat.id)}
-                        disabled={busy === `chat-${chat.id}`}
-                        className="rounded-lg p-1.5 text-[#667186] hover:bg-rose-400/10 hover:text-rose-300"
-                        aria-label={`Desvincular ${chat.title}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Canal de Enviaveis / VIP & Funil de Liberação Segura 🛡️ */}
-            <div className="space-y-3.5 rounded-2xl border border-purple-500/30 bg-[#120f1d] p-4 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
-                    <ShieldCheck className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-purple-200">
-                      Canal de Enviaveis / VIP & Funil de Liberação Segura
-                    </h3>
-                    <p className="text-[11px] text-[#9a8ca8]">
-                      O lead só recebe o botão do canal VIP após passar por 100% das etapas configuradas abaixo.
-                    </p>
-                  </div>
-                </div>
-                {openBot.vipChannelId && (
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                    Ativo e Protegido
-                  </span>
-                )}
-              </div>
-
-              {/* Input para vincular canal VIP */}
-              <div>
-                <label className="text-[11px] font-semibold text-[#b8a8c8]">
-                  ID do Canal VIP no Telegram (-100... ou @canal):
-                </label>
-                <div className="mt-1.5 flex gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7f6f8f]" />
-                    <input
-                      value={vipChannelInput}
-                      onChange={(e) => setVipChannelInput(e.target.value)}
-                      placeholder="-100192837482 ou @seucanalvip"
-                      className="input mono pl-9 text-xs border-purple-500/30 bg-[#0c0914] text-white focus:border-purple-400"
+                  <p className="mt-0.5 text-xs text-[#718096]">
+                    A modelo responderá leads automaticamente neste idioma em todas as boas-vindas, comandos (/start, /menu, /ajuda) e conversas.
+                  </p>
+                  <div className="mt-2.5 max-w-xs">
+                    <LanguageSelector
+                      value={(openBot.language as LanguageCode) || 'pt'}
+                      onChange={async (newLang) => {
+                        try {
+                          await api.updateBot(openBot.id, { language: newLang });
+                          notify(
+                            'success',
+                            'Idioma Atualizado!',
+                            `A modelo agora se comunica em ${
+                              newLang === 'en' ? 'Inglês (EUA)' : newLang === 'es' ? 'Espanhol' : 'Português (Brasil)'
+                            }.`
+                          );
+                          await refresh();
+                        } catch (err) {
+                          notify('error', 'Falha ao alterar idioma', err instanceof Error ? err.message : 'Tente novamente.');
+                        }
+                      }}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveVipChannel}
-                    disabled={validatingVip}
-                    className="btn-primary shrink-0 bg-purple-600 text-white hover:bg-purple-500 border-none text-xs font-bold shadow-md shadow-purple-600/30"
-                  >
-                    {validatingVip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                    Validar & Salvar Canal
-                  </button>
                 </div>
-                {vipValidationResult && (
-                  <div className="mt-2 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-200">
+
+                {/* Modo de Operação do Bot */}
+                <div className="space-y-3 rounded-2xl border border-[#232d3d] bg-[#10141d] p-4 shadow-md">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1b2330] pb-2.5">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#d4f933]/15 text-[#d4f933]">
+                        <SlidersHorizontal className="h-4 w-4" />
+                      </div>
                       <div>
-                        <span className="font-bold">{vipValidationResult.title}</span>
-                        {vipValidationResult.membersCount > 0 && (
-                          <span className="ml-2 text-[10px] text-emerald-300/80">
-                            {formatNumber(vipValidationResult.membersCount)} membros
-                          </span>
-                        )}
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                          Modo de Operação da Modelo
+                        </h3>
+                        <p className="text-[11px] text-[#718096]">
+                          Escolha como a modelo se comporta no Telegram.
+                        </p>
                       </div>
                     </div>
-                    <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      {vipValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
+                    <span className="rounded-full border border-[#d4f933]/30 bg-[#d4f933]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#d4f933]">
+                      {operatingMode === 'conversational_sales'
+                        ? 'Conversacional & Vendas'
+                        : operatingMode === 'strict_funnel'
+                        ? 'Funil Estrito VIP'
+                        : 'Apenas Transmissão'}
                     </span>
                   </div>
-                )}
-              </div>
 
-              {/* Etapas Obrigatórias para Liberação do Acesso */}
-              <div className="space-y-2 pt-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#9d8dae]">
-                  Etapas Obrigatórias de Validação:
-                </span>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div
-                    onClick={() => handleToggleVipReq('requireTerms')}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
-                      vipReqs.requireTerms
-                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
-                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={vipReqs.requireTerms}
-                      onChange={() => {}}
-                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
-                    />
-                    <div>
-                      <div className="text-xs font-bold">1. Confirmação +18</div>
-                      <p className="text-[10px] text-[#9c8eae]">Exige que o lead aceite termos de maioridade.</p>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleToggleVipReq('requirePayment')}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
-                      vipReqs.requirePayment
-                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
-                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={vipReqs.requirePayment}
-                      onChange={() => {}}
-                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
-                    />
-                    <div>
-                      <div className="text-xs font-bold">2. Pagamento Real</div>
-                      <p className="text-[10px] text-[#9c8eae]">Libera somente após PIX ou cartão aprovado.</p>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleToggleVipReq('singleUseLink')}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
-                      vipReqs.singleUseLink
-                        ? 'border-purple-500/50 bg-purple-500/15 text-white'
-                        : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={vipReqs.singleUseLink}
-                      onChange={() => {}}
-                      className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
-                    />
-                    <div>
-                      <div className="text-xs font-bold">3. Anti-Vazamento</div>
-                      <p className="text-[10px] text-[#9c8eae]">Gera link de uso único (1 membro por link).</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Prévia do Botão que o Lead Recebe no Telegram */}
-              <div className="rounded-xl border border-purple-500/20 bg-[#0a0812] p-3">
-                <div className="flex items-center justify-between text-[10px] text-[#8e7e9f] mb-1.5">
-                  <span>Prévia do Botão Seguro no Telegram:</span>
-                  <span className="text-emerald-400 font-bold">● Apenas após cumprir todas as etapas</span>
-                </div>
-                <div className="flex items-center justify-center rounded-xl bg-[#3b7c3d] px-4 py-2.5 text-xs font-bold text-white shadow">
-                  💎 ENTRAR NO CANAL VIP AGORA
-                </div>
-              </div>
-            </div>
-
-            {/* Grupo de Prévias Grátis & Agendamento Automático de Teasers 📸⏰ */}
-            <div className="space-y-4 rounded-2xl border border-amber-500/30 bg-[#14100c] p-4 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
-                    <Clock className="h-4 w-4" />
-                  </div>
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-200">
-                      Grupo de Prévias Grátis & Agendamento Automático
-                    </h3>
-                    <p className="text-[11px] text-[#a89885]">
-                      Dispare teasers e provocações programadas no grupo grátis com botão direto para a DM da modelo.
-                    </p>
-                  </div>
-                </div>
-                {openBot.previewGroupId && (
-                  <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
-                    {previewScheduleMode === 'interval'
-                      ? `Ativo · A cada ${previewScheduleIntervalHours}h`
-                      : previewScheduleMode === 'hours'
-                      ? `Ativo · ${previewScheduleHours.length} horários fixos`
-                      : 'Conectado · Envio Manual'}
-                  </span>
-                )}
-              </div>
-
-              {/* Input para vincular Grupo de Prévias */}
-              <div>
-                <label className="text-[11px] font-semibold text-[#c7b7a3]">
-                  ID do Grupo ou Canal de Prévias Grátis (-100... ou @canal):
-                </label>
-                <div className="mt-1.5 flex gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8d7c67]" />
-                    <input
-                      value={previewGroupInput}
-                      onChange={(e) => setPreviewGroupInput(e.target.value)}
-                      placeholder="-100192837482 ou @seucanalprevias"
-                      className="input mono pl-9 text-xs border-amber-500/30 bg-[#0d0a08] text-white focus:border-amber-400"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSavePreviewGroup}
-                    disabled={validatingPreview}
-                    className="btn-primary shrink-0 bg-amber-600 text-white hover:bg-amber-500 border-none text-xs font-bold shadow-md shadow-amber-600/30"
-                  >
-                    {validatingPreview ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                    Validar & Salvar Grupo
-                  </button>
-                </div>
-                {previewValidationResult && (
-                  <div className="mt-2 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
-                      <div>
-                        <span className="font-bold">{previewValidationResult.title}</span>
-                        {previewValidationResult.membersCount > 0 && (
-                          <span className="ml-2 text-[10px] text-amber-300/80">
-                            {formatNumber(previewValidationResult.membersCount)} membros reais
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                      {previewValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Seletor de Modo de Horário / Intervalo Automático */}
-              <div className="space-y-2 pt-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#b8a692]">
-                  Modo de Agendamento Automático:
-                </label>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleUpdateScheduleConfig('interval')}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
-                      previewScheduleMode === 'interval'
-                        ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
-                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <span className="text-xs font-bold text-white">Intervalo Regular</span>
-                      <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
-                        ⚡ Contínuo
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#9d8d7b]">Dispara teasers automaticamente a cada X horas.</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleUpdateScheduleConfig('hours')}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
-                      previewScheduleMode === 'hours'
-                        ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
-                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <span className="text-xs font-bold text-white">Horários Nobres</span>
-                      <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
-                        🎯 Pico de Conversão
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#9d8d7b]">Posta nos horários de maior tesão e atividade.</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleUpdateScheduleConfig('off')}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
-                      previewScheduleMode === 'off'
-                        ? 'border-gray-500 bg-gray-500/20 text-white'
-                        : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <span className="text-xs font-bold text-white">Desativado</span>
-                      <span className="rounded bg-gray-500/20 px-1.5 py-0.2 text-[9px] font-bold text-gray-400">
-                        Pausado
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#9d8d7b]">Envios apenas manuais pelo painel.</p>
-                  </button>
-                </div>
-
-                {/* Opções de Intervalo */}
-                {previewScheduleMode === 'interval' && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
-                    <span className="text-[11px] text-[#c7b7a3]">Disparar a cada:</span>
-                    {[2, 3, 4, 6, 8, 12].map((hours) => (
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da0b6]">
+                      Modo de Operação Ativo:
+                    </label>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
                       <button
-                        key={hours}
                         type="button"
-                        onClick={() => void handleUpdateScheduleConfig('interval', hours)}
-                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                          previewScheduleIntervalHours === hours
-                            ? 'bg-amber-500 text-black shadow'
-                            : 'bg-[#1e1710] text-[#a89885] hover:bg-[#2c2217]'
+                        onClick={() => void handleChangeOperatingMode('conversational_sales')}
+                        className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                          operatingMode === 'conversational_sales'
+                            ? 'border-[#d4f933] bg-[#d4f933]/10 text-white shadow-[0_0_15px_rgba(212,249,51,0.15)]'
+                            : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
                         }`}
                       >
-                        {hours}h
+                        <div className="flex w-full items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                            <MessageSquare className="h-3.5 w-3.5 text-[#d4f933]" />
+                            Conversacional
+                          </div>
+                          <span className="rounded bg-[#d4f933]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#d4f933]">
+                            🔥 Mais Vendas
+                          </span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                          A modelo cria conexão íntima, envia amostras e conduz o lead para compra naturalmente.
+                        </p>
                       </button>
-                    ))}
-                  </div>
-                )}
 
-                {/* Opções de Horários Nobres */}
-                {previewScheduleMode === 'hours' && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
-                    <span className="text-[11px] text-[#c7b7a3]">Horários configurados:</span>
-                    {['12:00', '18:00', '21:00', '22:30', '00:00'].map((hour) => {
-                      const isActive = previewScheduleHours.includes(hour);
-                      return (
-                        <button
-                          key={hour}
-                          type="button"
-                          onClick={() => {
-                            const updated = isActive
-                              ? previewScheduleHours.filter((h) => h !== hour)
-                              : [...previewScheduleHours, hour];
-                            void handleUpdateScheduleConfig('hours', previewScheduleIntervalHours, updated);
-                          }}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                            isActive
-                              ? 'bg-amber-500 text-black shadow'
-                              : 'bg-[#1e1710] text-[#8e7e6c] hover:bg-[#2c2217]'
-                          }`}
-                        >
-                          {hour} {isActive ? '✓' : '+'}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Biblioteca de Modelos de Mensagens de Prévia & Disparo Imediato */}
-              <div className="space-y-2 rounded-xl border border-amber-500/20 bg-[#0a0806] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                    Modelos de Mensagem de Prévia (Alta Conversão):
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleSendTeaserNow}
-                    disabled={sendingPreviewTeaser || !openBot.previewGroupId}
-                    className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
-                  >
-                    {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    Disparar Prévia Agora 🚀
-                  </button>
-                </div>
-
-                {/* Seletor de Templates de Prévia */}
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {PREVIEW_TEASERS.map((teaser) => (
-                    <div
-                      key={teaser.id}
-                      onClick={() => setSelectedTeaserTemplateId(teaser.id)}
-                      className={`cursor-pointer rounded-xl border p-2.5 transition ${
-                        selectedTeaserTemplateId === teaser.id
-                          ? 'border-amber-400 bg-amber-500/15 text-white'
-                          : 'border-[#2d2217] bg-[#100d09] text-[#8d7c69] hover:border-amber-500/30'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{teaser.title}</span>
-                        <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
-                          {teaser.badge}
-                        </span>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#9f8e7b]">
-                        {teaser.body}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between text-[9px] text-amber-400 font-bold">
-                        <span>Botão: {teaser.ctaText}</span>
-                        <span className="text-emerald-400">Tag: ?start={teaser.tag}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Gerador de Links Rastreados para Redes Sociais & DM da Modelo 🔗 */}
-            <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-[#0d1612] p-4 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
-                    <Share2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-200">
-                      Gerador de Link do Telegram 100% Real para Redes Sociais
-                    </h3>
-                    <p className="text-[11px] text-[#8fa89b]">
-                      Gere links validados para Instagram, TikTok e WhatsApp que destravam o chat privado da modelo com tracking.
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                  ● Link Oficial Validado na API
-                </span>
-              </div>
-
-              {/* Seletor de Redes Sociais */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da699]">
-                  Selecione onde você vai divulgar:
-                </label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {SOCIAL_PLATFORMS.map((plat) => (
-                    <button
-                      key={plat.id}
-                      type="button"
-                      onClick={() => setSocialPlatform(plat.id)}
-                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                        socialPlatform === plat.id
-                          ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_10px_rgba(16,185,129,0.2)]'
-                          : 'border-[#1b2b23] bg-[#08100c] text-[#7d9689] hover:border-emerald-500/40'
-                      }`}
-                    >
-                      <span>{plat.icon}</span>
-                      <span>{plat.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Caixa de Link Gerado & Ações */}
-              {(() => {
-                const activePlat = SOCIAL_PLATFORMS.find((p) => p.id === socialPlatform) || SOCIAL_PLATFORMS[0];
-                const officialLink = `https://t.me/${openBot.username}?start=${activePlat.tag}`;
-                const readyBio = activePlat.bioTemplate(officialLink, openBot.firstName);
-
-                return (
-                  <div className="space-y-3 rounded-xl border border-emerald-500/20 bg-[#080f0b] p-3.5">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
-                        <span>Link Oficial Formatado (Rastreamento Automático):</span>
-                        <span className="text-[10px] text-emerald-400 font-bold">Origem: ?start={activePlat.tag}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          readOnly
-                          value={officialLink}
-                          className="input mono text-xs border-emerald-500/30 bg-[#050b07] text-[#d4f933] font-bold flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(officialLink);
-                            setCopiedSocialLink(true);
-                            setTimeout(() => setCopiedSocialLink(false), 2000);
-                            notify('success', 'Link Copiado!', 'Cole na bio ou stories do seu perfil.');
-                          }}
-                          className="btn-primary shrink-0 bg-emerald-600 text-white hover:bg-emerald-500 border-none text-xs font-bold px-3"
-                        >
-                          {copiedSocialLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                          {copiedSocialLink ? 'Copiado!' : 'Copiar Link'}
-                        </button>
-                        <a
-                          href={officialLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn-secondary text-xs shrink-0 flex items-center gap-1"
-                        >
-                          Testar <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* Texto de Bio / Post Pronto */}
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
-                        <span>Texto Pronto para a Bio do seu Perfil:</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(readyBio);
-                            setCopiedBioText(true);
-                            setTimeout(() => setCopiedBioText(false), 2000);
-                            notify('success', 'Texto da Bio Copiado!', 'Cole diretamente na bio da sua rede social.');
-                          }}
-                          className="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
-                        >
-                          {copiedBioText ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                          {copiedBioText ? 'Bio Copiada!' : 'Copiar Texto da Bio'}
-                        </button>
-                      </div>
-                      <div className="rounded-lg border border-emerald-500/20 bg-[#040805] p-2.5 text-xs text-[#b9d5c6] whitespace-pre-line font-sans">
-                        {readyBio}
-                      </div>
-                    </div>
-
-                    {/* QR Code Rápido */}
-                    <div className="pt-1 flex items-center justify-between border-t border-emerald-500/10">
                       <button
                         type="button"
-                        onClick={() => setShowQrCode(!showQrCode)}
-                        className="btn-ghost text-xs text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1.5"
+                        onClick={() => void handleChangeOperatingMode('strict_funnel')}
+                        className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                          operatingMode === 'strict_funnel'
+                            ? 'border-purple-500 bg-purple-500/15 text-white shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                            : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
+                        }`}
                       >
-                        <QrCode className="h-4 w-4" />
-                        {showQrCode ? 'Ocultar QR Code' : 'Exibir QR Code para Stories/Artes'}
-                      </button>
-                      <span className="text-[10px] text-[#698274]">
-                        Quando o lead escaneia, a DM destrava direto no Telegram
-                      </span>
-                    </div>
-
-                    {showQrCode && (
-                      <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-emerald-500/30 bg-[#050c08] p-4 text-center sm:text-left">
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-                            officialLink
-                          )}&bgcolor=050c08&color=10b981&margin=1`}
-                          alt="QR Code Telegram"
-                          className="h-36 w-36 rounded-xl border border-emerald-500/40 p-1 shadow-lg shadow-emerald-500/10"
-                        />
-                        <div className="space-y-1.5">
-                          <h4 className="text-xs font-bold text-white">QR Code Direto para a DM da Modelo</h4>
-                          <p className="text-[11px] text-[#7d9789] leading-relaxed">
-                            Salve este QR Code para adicionar em fotos, vídeos, stories ou cartazes. Ao apontar a câmera do celular, o lead é jogado direto para o Telegram da modelo com o chat destravado.
-                          </p>
-                          <a
-                            href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(
-                              officialLink
-                            )}&margin=1`}
-                            target="_blank"
-                            download={`qrcode_${openBot.username}_${activePlat.tag}.png`}
-                            rel="noreferrer"
-                            className="btn-secondary text-xs inline-flex items-center gap-1.5"
-                          >
-                            <ExternalLink className="h-3 w-3" /> Baixar Imagem em Alta Resolução (HD)
-                          </a>
+                        <div className="flex w-full items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                            <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+                            Funil Estrito VIP
+                          </div>
+                          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-bold text-purple-300">
+                            🛡️ Blindado
+                          </span>
                         </div>
+                        <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                          Passo a passo rígido: exige maioridade +18 e pagamento antes de liberar qualquer mídia ou acesso.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleChangeOperatingMode('broadcast_only')}
+                        className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition ${
+                          operatingMode === 'broadcast_only'
+                            ? 'border-amber-400 bg-amber-400/10 text-white shadow-[0_0_15px_rgba(212,249,51,0.15)]'
+                            : 'border-[#222a39] bg-[#0c1017] text-[#8c9bb0] hover:border-[#344055]'
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                            <Radio className="h-3.5 w-3.5 text-amber-400" />
+                            Transmissão
+                          </div>
+                          <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                            📢 Disparo
+                          </span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-[#7c8b9e]">
+                          Não responde chats 1-a-1. Focado puramente em disparos e campanhas em massa nos canais/grupos.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ações do bot & Webhook */}
+                <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4 space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">Ações & Diagnóstico do bot</h3>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => void refreshBot(openBot.id)}
+                      disabled={busy === `refresh-${openBot.id}`}
+                      className="btn-secondary justify-start text-xs"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${busy === `refresh-${openBot.id}` ? 'animate-spin' : ''}`} />
+                      Atualizar dados oficiais
+                    </button>
+                    {!openBot.webhookUrl && (
+                      <button
+                        type="button"
+                        onClick={() => void syncBot(openBot.id)}
+                        disabled={busy === `sync-${openBot.id}`}
+                        className="btn-secondary justify-start text-xs"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${busy === `sync-${openBot.id}` ? 'animate-spin' : ''}`} />
+                        Buscar atualizações agora
+                      </button>
+                    )}
+                    {openBot.webhookUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => void removeWebhook(openBot.id)}
+                        disabled={busy === `unwebhook-${openBot.id}`}
+                        className="btn-secondary justify-start text-xs"
+                      >
+                        <X className="h-4 w-4" /> Remover webhook
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void setWebhook(openBot.id)}
+                        disabled={busy === `webhook-${openBot.id}` || !/^https:\/\//i.test(webhookBase)}
+                        className="btn-secondary justify-start text-xs disabled:opacity-50"
+                        title={
+                          /^https:\/\//i.test(webhookBase)
+                            ? 'Ativar webhook HTTPS'
+                            : 'Configure uma URL pública HTTPS em Ajustes'
+                        }
+                      >
+                        <Webhook className="h-4 w-4" /> Ativar webhook
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void installCommands(openBot.id)}
+                      disabled={busy === `commands-${openBot.id}`}
+                      className="btn-secondary justify-start text-xs"
+                    >
+                      <Command className="h-4 w-4" /> Instalar comandos
+                    </button>
+                  </div>
+                  {!openBot.webhookUrl && !/^https:\/\//i.test(webhookBase) && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('settings')}
+                      className="mt-2 text-[11px] font-medium text-[#d4f933] hover:underline"
+                    >
+                      Configurar URL pública para usar webhook →
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-[#252e3f] bg-[#0d1017] p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f7c91]">Webhook</div>
+                    <div className="mono mt-1 break-all text-[11px] leading-relaxed text-[#aab5c6]">
+                      {openBot.webhookUrl || 'Não configurado · long polling ativo'}
+                    </div>
+                    {openBot.webhookUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(openBot.webhookUrl || '');
+                          setCopied(true);
+                          window.setTimeout(() => setCopied(false), 1500);
+                        }}
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#d4f933]"
+                      >
+                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        {copied ? 'Copiado' : 'Copiar URL'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-[#252e3f] bg-[#0d1017] p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f7c91]">Capacidades</div>
+                    <div className="mt-2 space-y-1.5 text-[11px] text-[#a3aec0]">
+                      <div className="flex items-center justify-between"><span>Entrar em grupos</span><span className="text-[#d4f933]">{openBot.canJoinGroups ? 'Sim' : 'Não'}</span></div>
+                      <div className="flex items-center justify-between"><span>Ler mensagens</span><span className="text-[#d4f933]">{openBot.canReadAllGroupMessages ? 'Todas' : 'Comandos'}</span></div>
+                      <div className="flex items-center justify-between"><span>Inline queries</span><span className="text-[#d4f933]">{openBot.supportsInlineQueries ? 'Sim' : 'Não'}</span></div>
+                      <div className="flex items-center justify-between"><span>Updates pendentes</span><span className="text-[#d4f933]">{openBot.pendingUpdates}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gerador de Links Rastreados para Redes Sociais & DM da Modelo 🔗 */}
+                <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-[#0d1612] p-4 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <Share2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-200">
+                          Gerador de Link do Telegram 100% Real para Redes Sociais
+                        </h3>
+                        <p className="text-[11px] text-[#8fa89b]">
+                          Gere links validados para Instagram, TikTok e WhatsApp que destravam o chat privado da modelo com tracking.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                      ● Link Oficial Validado na API
+                    </span>
+                  </div>
+
+                  {/* Seletor de Redes Sociais */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#8da699]">
+                      Selecione onde você vai divulgar:
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {SOCIAL_PLATFORMS.map((plat) => (
+                        <button
+                          key={plat.id}
+                          type="button"
+                          onClick={() => setSocialPlatform(plat.id)}
+                          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                            socialPlatform === plat.id
+                              ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                              : 'border-[#1b2b23] bg-[#08100c] text-[#7d9689] hover:border-emerald-500/40'
+                          }`}
+                        >
+                          <span>{plat.icon}</span>
+                          <span>{plat.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Caixa de Link Gerado & Ações */}
+                  {(() => {
+                    const activePlat = SOCIAL_PLATFORMS.find((p) => p.id === socialPlatform) || SOCIAL_PLATFORMS[0];
+                    const officialLink = `https://t.me/${openBot.username}?start=${activePlat.tag}`;
+                    const readyBio = activePlat.bioTemplate(officialLink, openBot.firstName);
+
+                    return (
+                      <div className="space-y-3 rounded-xl border border-emerald-500/20 bg-[#080f0b] p-3.5">
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
+                            <span>Link Oficial Formatado (Rastreamento Automático):</span>
+                            <span className="text-[10px] text-emerald-400 font-bold">Origem: ?start={activePlat.tag}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              readOnly
+                              value={officialLink}
+                              className="input mono text-xs border-emerald-500/30 bg-[#050b07] text-[#d4f933] font-bold flex-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void navigator.clipboard.writeText(officialLink);
+                                setCopiedSocialLink(true);
+                                setTimeout(() => setCopiedSocialLink(false), 2000);
+                                notify('success', 'Link Copiado!', 'Cole na bio ou stories do seu perfil.');
+                              }}
+                              className="btn-primary shrink-0 bg-emerald-600 text-white hover:bg-emerald-500 border-none text-xs font-bold px-3"
+                            >
+                              {copiedSocialLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              {copiedSocialLink ? 'Copiado!' : 'Copiar Link'}
+                            </button>
+                            <a
+                              href={officialLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn-secondary text-xs shrink-0 flex items-center gap-1"
+                            >
+                              Testar <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Texto de Bio / Post Pronto */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] text-[#8ea89a] mb-1">
+                            <span>Texto Pronto para a Bio do seu Perfil:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void navigator.clipboard.writeText(readyBio);
+                                setCopiedBioText(true);
+                                setTimeout(() => setCopiedBioText(false), 2000);
+                                notify('success', 'Texto da Bio Copiado!', 'Cole diretamente na bio da sua rede social.');
+                              }}
+                              className="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                            >
+                              {copiedBioText ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              {copiedBioText ? 'Bio Copiada!' : 'Copiar Texto da Bio'}
+                            </button>
+                          </div>
+                          <div className="rounded-lg border border-emerald-500/20 bg-[#040805] p-2.5 text-xs text-[#b9d5c6] whitespace-pre-line font-sans">
+                            {readyBio}
+                          </div>
+                        </div>
+
+                        {/* QR Code Rápido */}
+                        <div className="pt-1 flex items-center justify-between border-t border-emerald-500/10">
+                          <button
+                            type="button"
+                            onClick={() => setShowQrCode(!showQrCode)}
+                            className="btn-ghost text-xs text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1.5"
+                          >
+                            <QrCode className="h-4 w-4" />
+                            {showQrCode ? 'Ocultar QR Code' : 'Exibir QR Code para Stories/Artes'}
+                          </button>
+                          <span className="text-[10px] text-[#698274]">
+                            Quando o lead escaneia, a DM destrava direto no Telegram
+                          </span>
+                        </div>
+
+                        {showQrCode && (
+                          <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-emerald-500/30 bg-[#050c08] p-4 text-center sm:text-left">
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+                                officialLink
+                              )}&bgcolor=050c08&color=10b981&margin=1`}
+                              alt="QR Code Telegram"
+                              className="h-36 w-36 rounded-xl border border-emerald-500/40 p-1 shadow-lg shadow-emerald-500/10"
+                            />
+                            <div className="space-y-1.5">
+                              <h4 className="text-xs font-bold text-white">QR Code Direto para a DM da Modelo</h4>
+                              <p className="text-[11px] text-[#7d9789] leading-relaxed">
+                                Salve este QR Code para adicionar em fotos, vídeos, stories ou cartazes. Ao apontar a câmera do celular, o lead é jogado direto para o Telegram da modelo com o chat destravado.
+                              </p>
+                              <a
+                                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(
+                                  officialLink
+                                )}&margin=1`}
+                                target="_blank"
+                                download={`qrcode_${openBot.username}_${activePlat.tag}.png`}
+                                rel="noreferrer"
+                                className="btn-secondary text-xs inline-flex items-center gap-1.5"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Baixar Imagem em Alta Resolução (HD)
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">Comandos publicados</h3>
+                  {openBot.commands.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-[#293246] p-3 text-[11px] text-[#748196]">
+                      Nenhum comando publicado. Use “Instalar comandos” para criar /start, /menu e /ajuda.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {openBot.commands.map((command) => (
+                        <span key={command.command} className="badge border-[#2b3447] bg-[#171c26] text-[#bdc6d4]">
+                          <span className="mono text-[#d4f933]">/{command.command}</span>
+                          <span className="font-normal text-[#7b879b]">{command.description}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Planos & Upsell */}
+            {botModalCategory === 'plans_upsell' && (
+              <div className="space-y-4">
+                <div className="space-y-3.5 rounded-2xl border border-purple-500/30 bg-[#120f1d] p-4 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                          Etapas do Funil de Conversão & Upsell
+                        </h3>
+                        <p className="text-[11px] text-[#9a8ca8]">
+                          Ative ou desative cada etapa do processo de atração, sedução e venda da modelo.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-bold text-purple-300">
+                      {funnelStages.filter((s) => s.enabled).length} de {funnelStages.length} etapas ativas
+                    </span>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {funnelStages.map((stage) => (
+                      <div
+                        key={stage.id}
+                        onClick={() => void handleToggleFunnelStage(stage.id)}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
+                          stage.enabled
+                            ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                            : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={stage.enabled}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold">{stage.name}</div>
+                          <p className="mt-0.5 text-[10px] text-[#9c8eae]">{stage.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                        Planos e Preços Disponíveis ({state.products.length})
+                      </h3>
+                      <p className="text-[11px] text-[#718096]">
+                        Estes planos são oferecidos no comando /menu e nos botões de checkout.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenBotId(null);
+                        onNavigate('vendas');
+                      }}
+                      className="btn-ghost text-xs text-[#d4f933] hover:underline"
+                    >
+                      Gerenciar na Aba Vendas →
+                    </button>
+                  </div>
+                  {state.products.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-[#293246] p-4 text-center text-xs text-[#718096]">
+                      Nenhum produto cadastrado ainda. Crie planos e assinaturas na aba Vendas.
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {state.products.map((prod) => (
+                        <div key={prod.id} className="rounded-xl border border-[#252e3f] bg-[#0d1017] p-3">
+                          <div className="text-xs font-bold text-white truncate">{prod.name}</div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="mono text-xs font-bold text-[#d4f933]">{formatBRL(prod.priceCents)}</span>
+                            <span className="text-[10px] text-[#718096]">{prod.active ? 'Ativo' : 'Inativo'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Grupo de Prévias */}
+            {botModalCategory === 'preview_group' && (
+              <div className="space-y-4">
+                <div className="space-y-4 rounded-2xl border border-amber-500/30 bg-[#14100c] p-4 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-amber-200">
+                          Grupo de Prévias Grátis & Agendamento Automático
+                        </h3>
+                        <p className="text-[11px] text-[#a89885]">
+                          Dispare teasers e provocações programadas no grupo grátis com botão direto para a DM da modelo.
+                        </p>
+                      </div>
+                    </div>
+                    {openBot.previewGroupId && (
+                      <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300">
+                        {previewScheduleMode === 'interval'
+                          ? `Ativo · A cada ${previewScheduleIntervalHours}h`
+                          : previewScheduleMode === 'hours'
+                          ? `Ativo · ${previewScheduleHours.length} horários fixos`
+                          : 'Conectado · Envio Manual'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Input para vincular Grupo de Prévias */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-[#c7b7a3]">
+                      ID do Grupo ou Canal de Prévias Grátis (-100... ou @canal):
+                    </label>
+                    <div className="mt-1.5 flex gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8d7c67]" />
+                        <input
+                          value={previewGroupInput}
+                          onChange={(e) => setPreviewGroupInput(e.target.value)}
+                          placeholder="-100192837482 ou @seucanalprevias"
+                          className="input mono pl-9 text-xs border-amber-500/30 bg-[#0d0a08] text-white focus:border-amber-400"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSavePreviewGroup}
+                        disabled={validatingPreview}
+                        className="btn-primary shrink-0 bg-amber-600 text-white hover:bg-amber-500 border-none text-xs font-bold shadow-md shadow-amber-600/30"
+                      >
+                        {validatingPreview ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        Validar & Salvar Grupo
+                      </button>
+                    </div>
+                    {previewValidationResult && (
+                      <div className="mt-2 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                          <div>
+                            <span className="font-bold">{previewValidationResult.title}</span>
+                            {previewValidationResult.membersCount > 0 && (
+                              <span className="ml-2 text-[10px] text-amber-300/80">
+                                {formatNumber(previewValidationResult.membersCount)} membros reais
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                          {previewValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
+                        </span>
                       </div>
                     )}
                   </div>
-                );
-              })()}
-            </div>
 
-            <div>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">Comandos publicados</h3>
-              {openBot.commands.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#293246] p-3 text-[11px] text-[#748196]">
-                  Nenhum comando publicado. Use “Instalar comandos” para criar /start, /menu e /ajuda.
+                  {/* Seletor de Modo de Horário / Intervalo Automático */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#b8a692]">
+                      Modo de Agendamento Automático:
+                    </label>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateScheduleConfig('interval')}
+                        className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                          previewScheduleMode === 'interval'
+                            ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                            : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-xs font-bold text-white">Intervalo Regular</span>
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                            ⚡ Contínuo
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#9d8d7b]">Dispara teasers automaticamente a cada X horas.</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateScheduleConfig('hours')}
+                        className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                          previewScheduleMode === 'hours'
+                            ? 'border-amber-400 bg-amber-500/20 text-white shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                            : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-xs font-bold text-white">Horários Nobres</span>
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                            🎯 Pico de Conversão
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#9d8d7b]">Posta nos horários de maior tesão e atividade.</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateScheduleConfig('off')}
+                        className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition ${
+                          previewScheduleMode === 'off'
+                            ? 'border-gray-500 bg-gray-500/20 text-white'
+                            : 'border-[#2d241c] bg-[#0d0a08] text-[#8e7e6c] hover:border-[#4d3e30]'
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-xs font-bold text-white">Desativado</span>
+                          <span className="rounded bg-gray-500/20 px-1.5 py-0.2 text-[9px] font-bold text-gray-400">
+                            Pausado
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#9d8d7b]">Envios apenas manuais pelo painel.</p>
+                      </button>
+                    </div>
+
+                    {/* Opções de Intervalo */}
+                    {previewScheduleMode === 'interval' && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
+                        <span className="text-[11px] text-[#c7b7a3]">Disparar a cada:</span>
+                        {[2, 3, 4, 6, 8, 12].map((hours) => (
+                          <button
+                            key={hours}
+                            type="button"
+                            onClick={() => void handleUpdateScheduleConfig('interval', hours)}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                              previewScheduleIntervalHours === hours
+                                ? 'bg-amber-500 text-black shadow'
+                                : 'bg-[#1e1710] text-[#a89885] hover:bg-[#2c2217]'
+                            }`}
+                          >
+                            {hours}h
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Opções de Horários Nobres */}
+                    {previewScheduleMode === 'hours' && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-[#0d0a08] p-2.5">
+                        <span className="text-[11px] text-[#c7b7a3]">Horários configurados:</span>
+                        {['12:00', '18:00', '21:00', '22:30', '00:00'].map((hour) => {
+                          const isActive = previewScheduleHours.includes(hour);
+                          return (
+                            <button
+                              key={hour}
+                              type="button"
+                              onClick={() => {
+                                const updated = isActive
+                                  ? previewScheduleHours.filter((h) => h !== hour)
+                                  : [...previewScheduleHours, hour];
+                                void handleUpdateScheduleConfig('hours', previewScheduleIntervalHours, updated);
+                              }}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                                isActive
+                                  ? 'bg-amber-500 text-black shadow'
+                                  : 'bg-[#1e1710] text-[#8e7e6c] hover:bg-[#2c2217]'
+                              }`}
+                            >
+                              {hour} {isActive ? '✓' : '+'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Biblioteca de Modelos de Mensagens de Prévia & Disparo Imediato */}
+                  <div className="space-y-2 rounded-xl border border-amber-500/20 bg-[#0a0806] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                        Modelos de Mensagem de Prévia (Alta Conversão):
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSendTeaserNow}
+                        disabled={sendingPreviewTeaser || !openBot.previewGroupId}
+                        className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
+                      >
+                        {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                        Disparar Prévia Agora 🚀
+                      </button>
+                    </div>
+
+                    {/* Seletor de Templates de Prévia */}
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {PREVIEW_TEASERS.map((teaser) => (
+                        <div
+                          key={teaser.id}
+                          onClick={() => setSelectedTeaserTemplateId(teaser.id)}
+                          className={`cursor-pointer rounded-xl border p-2.5 transition ${
+                            selectedTeaserTemplateId === teaser.id
+                              ? 'border-amber-400 bg-amber-500/15 text-white'
+                              : 'border-[#2d2217] bg-[#100d09] text-[#8d7c69] hover:border-amber-500/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white">{teaser.title}</span>
+                            <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                              {teaser.badge}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#9f8e7b]">
+                            {teaser.body}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between text-[9px] text-amber-400 font-bold">
+                            <span>Botão: {teaser.ctaText}</span>
+                            <span className="text-emerald-400">Tag: ?start={teaser.tag}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {openBot.commands.map((command) => (
-                    <span key={command.command} className="badge border-[#2b3447] bg-[#171c26] text-[#bdc6d4]">
-                      <span className="mono text-[#d4f933]">/{command.command}</span>
-                      <span className="font-normal text-[#7b879b]">{command.description}</span>
+              </div>
+            )}
+
+            {/* 4. Recuperação Agressiva de Leads */}
+            {botModalCategory === 'recovery' && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-emerald-500/30 bg-[#0d1612] p-4 shadow-lg space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-200">
+                          Modelos de Mensagem de Recuperação de Lead (Alta Conversão)
+                        </h3>
+                        <p className="text-[11px] text-[#8fa89b]">
+                          Cópias agressivas de recuperação com desconto e botões de compra direta no estilo do Telegram.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenBotId(null);
+                        onNavigate('campaigns');
+                      }}
+                      className="btn-ghost text-xs text-emerald-400 hover:underline"
+                    >
+                      Automações & Disparos →
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {/* Modelo 1: 30% OFF (Sensorial & Desejo) */}
+                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Modelo 1: 30% OFF (Cerveja no Bar)</span>
+                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                          🔥 Campeão de Vendas
+                        </span>
+                      </div>
+                      <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
+                        Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          MENSAL + 🎁 por R$ 13.93 (30% OFF)
+                        </div>
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          1 DIA NO PARAISO 😈 por R$ 6.93 (30% OFF)
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(
+                            'Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦'
+                          );
+                          notify('success', 'Copy Copiado!', 'Texto de recuperação copiado para a área de transferência.');
+                        }}
+                        className="btn-secondary w-full text-xs justify-center"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copiar Copy do Modelo
+                      </button>
+                    </div>
+
+                    {/* Modelo 2: 25% OFF (Barulho Molhado & WhatsApp) */}
+                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Modelo 2: 25% OFF (Áudio Molhado)</span>
+                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                          💦 Alta Conversão
+                        </span>
+                      </div>
+                      <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
+                        Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          MENSAL + 🎁 por R$ 14.93 (25% OFF)
+                        </div>
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          1 DIA NO PARAISO 😈 por R$ 7.43 (25% OFF)
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(
+                            'Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...'
+                          );
+                          notify('success', 'Copy Copiado!', 'Texto de recuperação copiado para a área de transferência.');
+                        }}
+                        className="btn-secondary w-full text-xs justify-center"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copiar Copy do Modelo
+                      </button>
+                    </div>
+
+                    {/* Modelo 3: 40% OFF (Escassez Relâmpago) */}
+                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Modelo 3: 40% OFF (Última Chamada)</span>
+                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                          ⏳ Escassez
+                        </span>
+                      </div>
+                      <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
+                        Sumiu vida? O sistema vai cancelar seu acesso promocional... Liberei 40% OFF só até a meia-noite pra você ver meus vídeos pelada e me mandar direct na hora. ⏳🥵
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          MENSAL + 🎁 por R$ 11.90 (40% OFF)
+                        </div>
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          1 DIA NO PARAISO 😈 por R$ 5.90 (40% OFF)
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(
+                            'Sumiu vida? O sistema vai cancelar seu acesso promocional... Liberei 40% OFF só até a meia-noite pra você ver meus vídeos pelada e me mandar direct na hora. ⏳🥵'
+                          );
+                          notify('success', 'Copy Copiado!', 'Texto de recuperação copiado.');
+                        }}
+                        className="btn-secondary w-full text-xs justify-center"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copiar Copy do Modelo
+                      </button>
+                    </div>
+
+                    {/* Modelo 4: PIX Pendente */}
+                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Modelo 4: PIX Gerado Pendente</span>
+                        <span className="rounded bg-purple-500/20 px-2 py-0.5 text-[9px] font-bold text-purple-300">
+                          ⚡ Resgate de Carrinho
+                        </span>
+                      </div>
+                      <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
+                        Vi que você gerou a chave PIX mas ainda não confirmou... Se pagar agora, eu te mando um áudio gemendo seu nome no WhatsApp além do link VIP instantâneo! 💦💋
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          COPIAR CÓDIGO PIX AGORA ⚡
+                        </div>
+                        <div className="flex items-center justify-center rounded-lg bg-[#1f4a21] py-2 text-xs font-bold text-white shadow">
+                          ENVIAR COMPROVANTE NA DM 🧾
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(
+                            'Vi que você gerou a chave PIX mas ainda não confirmou... Se pagar agora, eu te mando um áudio gemendo seu nome no WhatsApp além do link VIP instantâneo! 💦💋'
+                          );
+                          notify('success', 'Copy Copiado!', 'Texto de recuperação copiado.');
+                        }}
+                        className="btn-secondary w-full text-xs justify-center"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copiar Copy do Modelo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. Canal VIP & Comunidades */}
+            {botModalCategory === 'vip_channel' && (
+              <div className="space-y-4">
+                {/* Canal de Enviaveis / VIP & Funil de Liberação Segura 🛡️ */}
+                <div className="space-y-3.5 rounded-2xl border border-purple-500/30 bg-[#120f1d] p-4 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300">
+                        <ShieldCheck className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                          Canal de Enviaveis / VIP & Funil de Liberação Segura
+                        </h3>
+                        <p className="text-[11px] text-[#9a8ca8]">
+                          O lead só recebe o botão do canal VIP após passar por 100% das etapas configuradas abaixo.
+                        </p>
+                      </div>
+                    </div>
+                    {openBot.vipChannelId && (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                        Ativo e Protegido
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Input para vincular canal VIP */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-[#b8a8c8]">
+                      ID do Canal VIP no Telegram (-100... ou @canal):
+                    </label>
+                    <div className="mt-1.5 flex gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7f6f8f]" />
+                        <input
+                          value={vipChannelInput}
+                          onChange={(e) => setVipChannelInput(e.target.value)}
+                          placeholder="-100192837482 ou @seucanalvip"
+                          className="input mono pl-9 text-xs border-purple-500/30 bg-[#0c0914] text-white focus:border-purple-400"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveVipChannel}
+                        disabled={validatingVip}
+                        className="btn-primary shrink-0 bg-purple-600 text-white hover:bg-purple-500 border-none text-xs font-bold shadow-md shadow-purple-600/30"
+                      >
+                        {validatingVip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                        Validar & Salvar Canal
+                      </button>
+                    </div>
+                    {vipValidationResult && (
+                      <div className="mt-2 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <div>
+                            <span className="font-bold">{vipValidationResult.title}</span>
+                            {vipValidationResult.membersCount > 0 && (
+                              <span className="ml-2 text-[10px] text-emerald-300/80">
+                                {formatNumber(vipValidationResult.membersCount)} membros
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                          {vipValidationResult.isAdmin ? 'Admin Confirmado' : 'Membro'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Etapas Obrigatórias para Liberação do Acesso */}
+                  <div className="space-y-2 pt-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#9d8dae]">
+                      Etapas Obrigatórias de Validação:
                     </span>
-                  ))}
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div
+                        onClick={() => handleToggleVipReq('requireTerms')}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                          vipReqs.requireTerms
+                            ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                            : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={vipReqs.requireTerms}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">1. Confirmação +18</div>
+                          <p className="text-[10px] text-[#9c8eae]">Exige que o lead aceite termos de maioridade.</p>
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => handleToggleVipReq('requirePayment')}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                          vipReqs.requirePayment
+                            ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                            : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={vipReqs.requirePayment}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">2. Pagamento Real</div>
+                          <p className="text-[10px] text-[#9c8eae]">Libera somente após PIX ou cartão aprovado.</p>
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => handleToggleVipReq('singleUseLink')}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${
+                          vipReqs.singleUseLink
+                            ? 'border-purple-500/50 bg-purple-500/15 text-white'
+                            : 'border-[#272138] bg-[#0c0914] text-[#7d6f8d] hover:border-purple-500/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={vipReqs.singleUseLink}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-purple-500 text-purple-600 focus:ring-0"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">3. Anti-Vazamento</div>
+                          <p className="text-[10px] text-[#9c8eae]">Gera link de uso único (1 membro por link).</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prévia do Botão que o Lead Recebe no Telegram */}
+                  <div className="rounded-xl border border-purple-500/20 bg-[#0a0812] p-3">
+                    <div className="flex items-center justify-between text-[10px] text-[#8e7e9f] mb-1.5">
+                      <span>Prévia do Botão Seguro no Telegram:</span>
+                      <span className="text-emerald-400 font-bold">● Apenas após cumprir todas as etapas</span>
+                    </div>
+                    <div className="flex items-center justify-center rounded-xl bg-[#3b7c3d] px-4 py-2.5 text-xs font-bold text-white shadow">
+                      💎 ENTRAR NO CANAL VIP AGORA
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Comunidades Vinculadas */}
+                <div className="rounded-2xl border border-[#232d3d] bg-[#10141d] p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-[#7f8ca1]">
+                      Comunidades vinculadas ({botChats.length})
+                    </h3>
+                  </div>
+                  <form onSubmit={addChat} className="mb-3 flex gap-2">
+                    <div className="relative min-w-0 flex-1">
+                      <Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#68758b]" />
+                      <input
+                        value={newChatId}
+                        onChange={(event) => setNewChatId(event.target.value)}
+                        className="input mono pl-9 text-xs"
+                        placeholder="-1001234567890 ou @canal"
+                        aria-label="ID do canal ou grupo"
+                      />
+                    </div>
+                    <button type="submit" disabled={busy === 'add-chat' || !newChatId.trim()} className="btn-primary shrink-0 text-xs">
+                      {busy === 'add-chat' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                      Vincular
+                    </button>
+                  </form>
+                  {botChats.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[#293246] p-4 text-center text-[11px] text-[#748196]">
+                      Nenhum canal ou grupo vinculado. Adicione o bot como administrador e informe o ID acima.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {botChats.map((chat) => (
+                        <div key={chat.id} className="flex items-center gap-3 rounded-xl border border-[#252e3f] bg-[#0d1017] p-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1a202c] text-[#d4f933]">
+                            <Hash className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-semibold text-white">{chat.title}</div>
+                            <div className="mono truncate text-[10px] text-[#6f7c91]">
+                              {chat.telegramChatId} · {formatNumber(chat.membersCount)} membros
+                            </div>
+                          </div>
+                          <span className={`badge ${chat.isAdmin ? 'border-[#d4f933]/25 bg-[#d4f933]/10 text-[#d4f933]' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}>
+                            {chat.isAdmin ? 'Admin' : 'Membro'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void removeChat(chat.id)}
+                            disabled={busy === `chat-${chat.id}`}
+                            className="rounded-lg p-1.5 text-[#667186] hover:bg-rose-400/10 hover:text-rose-300"
+                            aria-label={`Desvincular ${chat.title}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 6. Bio Link / Perfil */}
+            {botModalCategory === 'bio_profile' && (
+              <div className="space-y-4">
+                {(() => {
+                  const linkedProfile =
+                    state.profiles?.find(
+                      (p) =>
+                        p.botId === openBot.id ||
+                        p.handle.toLowerCase().replace('@', '') === openBot.username.toLowerCase()
+                    ) || state.profiles?.[0];
+
+                  if (!linkedProfile) {
+                    return (
+                      <div className="rounded-2xl border border-dashed border-[#293246] p-6 text-center space-y-3">
+                        <Globe className="h-8 w-8 text-[#d4f933] mx-auto" />
+                        <div>
+                          <h4 className="text-sm font-bold text-white">Nenhum Bio Link vinculado a esta modelo</h4>
+                          <p className="mt-1 text-xs text-[#718096]">
+                            Crie uma página de perfil dark moderna no estilo das fotos com fotos de fundo, selo azul verificado e links para redes sociais.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenBotId(null);
+                            onNavigate('profiles');
+                          }}
+                          className="btn-primary text-xs mx-auto"
+                        >
+                          Ir para Aba Bio Links & Criar Perfil →
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  const profileUrl = `${window.location.origin}/p/${linkedProfile.slug}`;
+                  const ctrValue =
+                    linkedProfile.metrics.views > 0
+                      ? ((linkedProfile.metrics.clicks / linkedProfile.metrics.views) * 100).toFixed(1)
+                      : '0.0';
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Cartão de Resumo do Perfil */}
+                      <div className="rounded-2xl border border-[#263143] bg-[#0c1017] p-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={linkedProfile.avatarUrl || openBot.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                              alt={linkedProfile.name}
+                              className="h-12 w-12 rounded-full object-cover border border-[#3b475c]"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-bold text-white">{linkedProfile.name}</span>
+                                {linkedProfile.verified && (
+                                  <span className="text-sky-400">✓</span>
+                                )}
+                              </div>
+                              <span className="mono text-xs text-[#7f90a6]">{linkedProfile.handle}</span>
+                            </div>
+                          </div>
+                          <span className={`badge ${linkedProfile.active ? 'border-[#d4f933]/30 bg-[#d4f933]/10 text-[#d4f933]' : 'border-slate-500/30 bg-slate-500/10 text-slate-400'}`}>
+                            {linkedProfile.active ? 'Página Pública Ativa' : 'Pausada'}
+                          </span>
+                        </div>
+
+                        {/* Métricas Reais do Perfil */}
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-1">
+                          <div className="rounded-xl border border-[#202738] bg-[#07090e] p-2.5 text-center">
+                            <div className="text-[10px] uppercase tracking-wider text-[#6b7b91]">Visualizações</div>
+                            <div className="mono mt-1 text-base font-bold text-white">
+                              {formatNumber(linkedProfile.metrics.views)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-[#202738] bg-[#07090e] p-2.5 text-center">
+                            <div className="text-[10px] uppercase tracking-wider text-[#6b7b91]">Visitantes Únicos</div>
+                            <div className="mono mt-1 text-base font-bold text-[#d4f933]">
+                              {formatNumber(linkedProfile.metrics.uniqueVisitors)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-[#202738] bg-[#07090e] p-2.5 text-center">
+                            <div className="text-[10px] uppercase tracking-wider text-[#6b7b91]">Cliques nos Links</div>
+                            <div className="mono mt-1 text-base font-bold text-sky-400">
+                              {formatNumber(linkedProfile.metrics.clicks)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-[#202738] bg-[#07090e] p-2.5 text-center">
+                            <div className="text-[10px] uppercase tracking-wider text-[#6b7b91]">CTR %</div>
+                            <div className="mono mt-1 text-base font-bold text-emerald-400">
+                              {ctrValue}%
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* URL Pública e Ações */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1a2230]">
+                          <input
+                            readOnly
+                            value={profileUrl}
+                            className="input mono text-xs flex-1 border-[#293548] bg-[#06080c] text-[#d4f933]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(profileUrl);
+                              notify('success', 'Link Copiado!', 'Cole na bio das redes sociais.');
+                            }}
+                            className="btn-secondary text-xs"
+                          >
+                            <Copy className="h-3.5 w-3.5" /> Copiar Link
+                          </button>
+                          <a
+                            href={profileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-primary text-xs"
+                          >
+                            Ver Página <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenBotId(null);
+                            onNavigate('profiles');
+                          }}
+                          className="btn-ghost text-xs text-[#d4f933] hover:underline"
+                        >
+                          Editar Fotos, Degradês e Botões na Aba Bio Links & Perfis →
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#222a39] pt-4">
               <button

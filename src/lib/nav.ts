@@ -2,6 +2,7 @@ export type NavTab =
   | 'dashboard'
   | 'bots'
   | 'leads'
+  | 'profiles'
   | 'messages'
   | 'studio'
   | 'automacao'
@@ -27,6 +28,12 @@ export const NAV_ITEMS: Array<{ id: NavTab; label: string; title: string; subtit
     label: 'Leads',
     title: 'Leads e CRM',
     subtitle: 'Contatos reais captados pelas conversas do Telegram.',
+  },
+  {
+    id: 'profiles',
+    label: 'Bio Links & Perfis',
+    title: 'Bio Links e Perfis das Modelos',
+    subtitle: 'Páginas exclusivas estilo link-in-bio dark, degradês, cards de mídia e métricas reais de conversão.',
   },
   {
     id: 'messages',

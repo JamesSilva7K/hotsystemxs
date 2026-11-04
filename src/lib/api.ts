@@ -12,6 +12,9 @@ import type {
   GenerateTemplatesInput,
   Lead,
   MessageTemplate,
+  ModelProfile,
+  CreateModelProfileInput,
+  ProfileButton,
   Product,
   PublicIntegrations,
   Purchase,
@@ -275,4 +278,17 @@ export const api = {
     }>('/api/automation/run', {}),
 
   clearData: (confirm: string) => post<{ ok: boolean }>('/api/data/clear', { confirm }),
+
+  // ---------- Perfis e Bio Links das Modelos (/p/:slug) ----------
+  createProfile: (input: CreateModelProfileInput) =>
+    post<{ ok: boolean; profile: ModelProfile }>('/api/profiles', input),
+  updateProfile: (id: string, input: Partial<CreateModelProfileInput>) =>
+    patch<{ ok: boolean; profile: ModelProfile }>(`/api/profiles/${id}`, input),
+  deleteProfile: (id: string) => remove<{ ok: boolean }>(`/api/profiles/${id}`),
+  getPublicProfile: (slug: string, isUnique?: boolean) =>
+    request<{ ok: boolean; profile: ModelProfile }>(`/api/public/profiles/${slug}${isUnique ? '?unique=1' : ''}`),
+  recordProfileClick: (slug: string, buttonId: string) =>
+    post<{ ok: boolean; clicks: number }>(`/api/public/profiles/${slug}/click`, { buttonId }),
+  recordProfileExit: (slug: string) =>
+    post<{ ok: boolean }>(`/api/public/profiles/${slug}/exit`, {}),
 };

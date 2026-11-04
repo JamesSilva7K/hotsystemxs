@@ -13,6 +13,8 @@ import { Automation } from './components/Automation';
 import { Sales } from './components/Sales';
 import { SettingsView } from './components/SettingsView';
 import { VideoWatermarkStudio } from './components/VideoWatermarkStudio';
+import { ProfilesView } from './components/ProfilesView';
+import { PublicProfileView } from './components/PublicProfileView';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Login } from './components/Login';
@@ -37,6 +39,11 @@ export default function App() {
   const [composerMedia, setComposerMedia] = useState<{ url: string; type: 'video' | 'photo' | 'animation' } | null>(null);
   const loadSeq = useRef(0);
   const prevStateRef = useRef<AppState | null>(null);
+
+  const publicSlug = useMemo(() => {
+    const match = window.location.pathname.match(/^\/p\/([^/?#]+)/i);
+    return match ? decodeURIComponent(match[1]) : null;
+  }, []);
 
   const setTab = useCallback((next: NavTab) => {
     setTabState(next);
@@ -179,6 +186,10 @@ export default function App() {
     );
   }, [state]);
 
+  if (publicSlug) {
+    return <PublicProfileView slug={publicSlug} />;
+  }
+
   if (!authChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -227,6 +238,8 @@ export default function App() {
             }}
           />
         );
+      case 'profiles':
+        return <ProfilesView state={state} selectedBotId={selectedBotId} refresh={() => loadState()} />;
       case 'messages':
         return (
           <Messages

@@ -384,6 +384,7 @@ export interface AppState {
   sequences: FollowUpSequence[];
   products: Product[];
   purchases: Purchase[];
+  profiles: ModelProfile[];
   settings: Settings;
   integrations: PublicIntegrations;
   metrics: Metrics;
@@ -536,4 +537,80 @@ export interface RegisterPurchaseInput {
   customerDocument?: string;
   notes?: string;
   externalId?: string | null;
+}
+
+export interface ProfileSocialLinks {
+  instagram?: string;
+  tiktok?: string;
+  telegram?: string;
+  twitter?: string;
+  whatsapp?: string;
+}
+
+export interface ProfileButton {
+  id: string;
+  title: string;
+  subtitle?: string;
+  url: string;
+  imageUrl?: string;
+  badge?: string;
+  clicks: number;
+  order: number;
+  active: boolean;
+}
+
+export interface ModelProfileMetrics {
+  views: number;
+  uniqueVisitors: number;
+  clicks: number;
+  exits: number;
+  lastViewedAt?: string | null;
+}
+
+export type ProfileGradient = 'dark-fade' | 'smooth-black' | 'violet-glow' | 'rose-glow';
+
+export interface ModelProfile {
+  id: string;
+  botId: string;
+  slug: string;
+  name: string;
+  verified: boolean;
+  handle: string;
+  bio?: string;
+  followersCount: string;
+  bannerUrl: string;
+  avatarUrl?: string;
+  overlayGradient: ProfileGradient;
+  socialLinks: ProfileSocialLinks;
+  buttons: ProfileButton[];
+  metrics: ModelProfileMetrics;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateModelProfileInput {
+  botId: string;
+  slug: string;
+  name: string;
+  verified?: boolean;
+  handle: string;
+  bio?: string;
+  followersCount?: string;
+  bannerUrl: string;
+  avatarUrl?: string;
+  overlayGradient?: ProfileGradient;
+  socialLinks?: ProfileSocialLinks;
+  buttons?: Array<{
+    id?: string;
+    title: string;
+    subtitle?: string;
+    url: string;
+    imageUrl?: string;
+    badge?: string;
+    clicks?: number;
+    order?: number;
+    active?: boolean;
+  }>;
+  active?: boolean;
 }

@@ -17,6 +17,9 @@ import type {
   MessageLog,
   MessageTemplate,
   Metrics,
+  ModelProfile,
+  CreateModelProfileInput,
+  ProfileButton,
   Product,
   PublicIntegrations,
   Purchase,
@@ -86,6 +89,7 @@ interface Database {
   sequences: FollowUpSequence[];
   products: Product[];
   purchases: Purchase[];
+  profiles: ModelProfile[];
   settings: Settings;
   integrations: Integrations;
   seenUpdates: number[];
@@ -133,6 +137,7 @@ function emptyDatabase(): Database {
     sequences: [],
     products: [],
     purchases: [],
+    profiles: [],
     settings: defaultSettings(),
     integrations: defaultIntegrations(),
     seenUpdates: [],
@@ -185,6 +190,7 @@ function normalize(raw: Partial<Database> | null | undefined): Database {
     sequences: asArray(raw.sequences),
     products: asArray(raw.products),
     purchases: asArray(raw.purchases),
+    profiles: asArray(raw.profiles),
     integrations,
     seenUpdates: asArray<number>(raw.seenUpdates),
   };
@@ -866,6 +872,153 @@ export class Store {
     });
   }
 
+  // ---------- Perfis e Bio Links das Modelos ----------
+
+  findProfile(id: string): ModelProfile | undefined {
+    this.assertLoaded();
+    return this.db.profiles.find((p) => p.id === id);
+  }
+
+  findProfileBySlug(slug: string): ModelProfile | undefined {
+    this.assertLoaded();
+    const clean = slug.trim().toLowerCase();
+    return this.db.profiles.find((p) => p.slug.toLowerCase() === clean);
+  }
+
+  upsertProfile(input: CreateModelProfileInput & { id?: string }): ModelProfile {
+    return this.transaction((db) => {
+      if (!db.profiles) db.profiles = [];
+      const now = new Date().toISOString();
+      const slug = (input.slug || input.name || 'modelo')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_-]/g, '-')
+        .replace(/--+/g, '-')
+        .replace(/^-|-$/g, '') || 'modelo';
+
+      let existing = input.id ? db.profiles.find((p) => p.id === input.id) : undefined;
+      if (!existing) {
+        existing = db.profiles.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
+      }
+
+      if (existing) {
+        existing.botId = input.botId;
+        existing.slug = slug;
+        existing.name = input.name;
+        existing.verified = input.verified ?? existing.verified;
+        existing.handle = input.handle.startsWith('@') ? input.handle : `@${input.handle}`;
+        existing.bio = input.bio ?? existing.bio;
+        existing.followersCount = input.followersCount || existing.followersCount || '2.9M';
+        existing.bannerUrl = input.bannerUrl;
+        existing.avatarUrl = input.avatarUrl ?? existing.avatarUrl;
+        existing.overlayGradient = input.overlayGradient || existing.overlayGradient || 'dark-fade';
+        existing.socialLinks = { ...existing.socialLinks, ...(input.socialLinks || {}) };
+        if (input.buttons) {
+          existing.buttons = input.buttons.map((btn, index) => ({
+            id: btn.id || newId('btn'),
+            title: btn.title,
+            subtitle: btn.subtitle,
+            url: btn.url,
+            imageUrl: btn.imageUrl,
+            badge: btn.badge,
+            clicks: btn.clicks ?? 0,
+            order: btn.order ?? index,
+            active: btn.active ?? true,
+          }));
+        }
+        if (input.active !== undefined) existing.active = input.active;
+        existing.updatedAt = now;
+        return clone(existing);
+      }
+
+      const newProfile: ModelProfile = {
+        id: input.id || newId('prof'),
+        botId: input.botId,
+        slug,
+        name: input.name,
+        verified: input.verified ?? true,
+        handle: input.handle.startsWith('@') ? input.handle : `@${input.handle}`,
+        bio: input.bio || '',
+        followersCount: input.followersCount || '2.9M',
+        bannerUrl: input.bannerUrl,
+        avatarUrl: input.avatarUrl || '',
+        overlayGradient: input.overlayGradient || 'dark-fade',
+        socialLinks: input.socialLinks || {},
+        buttons: (input.buttons || []).map((btn, index) => ({
+          id: btn.id || newId('btn'),
+          title: btn.title,
+          subtitle: btn.subtitle,
+          url: btn.url,
+          imageUrl: btn.imageUrl,
+          badge: btn.badge,
+          clicks: btn.clicks ?? 0,
+          order: btn.order ?? index,
+          active: btn.active ?? true,
+        })),
+        metrics: {
+          views: 0,
+          uniqueVisitors: 0,
+          clicks: 0,
+          exits: 0,
+          lastViewedAt: null,
+        },
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      db.profiles.unshift(newProfile);
+      return clone(newProfile);
+    });
+  }
+
+  removeProfile(id: string): boolean {
+    return this.transaction((db) => {
+      const before = db.profiles.length;
+      db.profiles = db.profiles.filter((p) => p.id !== id);
+      return db.profiles.length !== before;
+    });
+  }
+
+  recordProfileView(slug: string, isUnique: boolean): ModelProfile | null {
+    return this.transaction((db) => {
+      if (!db.profiles) db.profiles = [];
+      const profile = db.profiles.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
+      if (!profile) return null;
+      profile.metrics.views += 1;
+      if (isUnique) {
+        profile.metrics.uniqueVisitors += 1;
+      }
+      profile.metrics.lastViewedAt = new Date().toISOString();
+      return clone(profile);
+    });
+  }
+
+  recordProfileClick(slug: string, buttonId: string): { profile: ModelProfile; button: ProfileButton } | null {
+    return this.transaction((db) => {
+      if (!db.profiles) db.profiles = [];
+      const profile = db.profiles.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
+      if (!profile) return null;
+      profile.metrics.clicks += 1;
+      const button = profile.buttons.find((b) => b.id === buttonId);
+      if (button) {
+        button.clicks += 1;
+      }
+      return { profile: clone(profile), button: button ? clone(button) : ({} as ProfileButton) };
+    });
+  }
+
+  recordProfileExit(slug: string): ModelProfile | null {
+    return this.transaction((db) => {
+      if (!db.profiles) db.profiles = [];
+      const profile = db.profiles.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
+      if (!profile) return null;
+      profile.metrics.exits += 1;
+      return clone(profile);
+    });
+  }
+
   clearOperationalData(): void {
     this.transaction((db) => {
       db.leads = [];
@@ -1126,6 +1279,7 @@ export class Store {
       sequences: clone(this.db.sequences),
       products: clone(this.db.products),
       purchases: clone(this.db.purchases.slice(0, 300)),
+      profiles: clone(this.db.profiles || []),
       settings: clone(this.db.settings),
       integrations: this.publicIntegrations(),
       metrics: this.buildMetrics(),
