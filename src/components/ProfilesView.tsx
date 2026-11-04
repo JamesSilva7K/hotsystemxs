@@ -3,10 +3,13 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
+  ChevronDown,
   Copy,
   ExternalLink,
   Eye,
+  Flame,
   Globe,
+  Image as ImageIcon,
   Instagram,
   Link2,
   Loader2,
@@ -16,18 +19,46 @@ import {
   QrCode,
   Send,
   Share2,
+  Smartphone,
   Sparkles,
+  Tag,
   Trash2,
   Twitter,
   UserCheck,
   Users,
+  Video,
   X,
+  Zap,
 } from 'lucide-react';
 import type { AppState, CreateModelProfileInput, ModelProfile, ProfileButton, ProfileGradient } from '@shared/types';
 import { api } from '../lib/api';
 import { formatNumber, relativeTime } from '../lib/format';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
+
+function IconTikTok({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.49 6.3 6.3 0 0 0 1.86-4.49V8.65a8.21 8.21 0 0 0 4.91 1.62v-3.58h-1z" />
+    </svg>
+  );
+}
+
+function IconWhatsApp({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.29" />
+    </svg>
+  );
+}
+
+function IconTwitterX({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 interface ProfilesViewProps {
   state: AppState;
@@ -820,25 +851,36 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                       {/* Redes Sociais Preview */}
                       <div className="mt-2 flex items-center justify-center gap-2">
                         {socialLinks.instagram && (
-                          <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white">
+                          <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shadow">
                             <Instagram className="h-3 w-3" />
                           </div>
                         )}
                         {socialLinks.tiktok && (
-                          <div className="h-6 w-6 rounded-full bg-black border border-white/20 flex items-center justify-center text-white text-[9px] font-bold">
-                            Tk
+                          <div className="h-6 w-6 rounded-full bg-black border border-white/20 flex items-center justify-center text-white shadow">
+                            <IconTikTok className="h-3 w-3" />
                           </div>
                         )}
                         {socialLinks.telegram && (
-                          <div className="h-6 w-6 rounded-full bg-[#24A1DE] flex items-center justify-center text-white">
+                          <div className="h-6 w-6 rounded-full bg-[#24A1DE] flex items-center justify-center text-white shadow">
                             <Send className="h-3 w-3" />
+                          </div>
+                        )}
+                        {socialLinks.twitter && (
+                          <div className="h-6 w-6 rounded-full bg-[#1DA1F2] flex items-center justify-center text-white shadow">
+                            <IconTwitterX className="h-3 w-3" />
+                          </div>
+                        )}
+                        {socialLinks.whatsapp && (
+                          <div className="h-6 w-6 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow">
+                            <IconWhatsApp className="h-3 w-3" />
                           </div>
                         )}
                       </div>
 
                       {/* Seguidores Pill */}
-                      <div className="mt-2 inline-flex items-center rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[9px] font-medium text-white">
-                        {followersCount || '2.9M'} Total Followers ⌄
+                      <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[9px] font-medium text-white">
+                        <span>{followersCount || '2.9M'} Total Followers</span>
+                        <ChevronDown className="h-2.5 w-2.5 text-white/70" />
                       </div>
                     </div>
                   </div>
@@ -862,8 +904,9 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                           <Link2 className="h-3 w-3" />
                         </div>
                         {btn.badge && (
-                          <span className="absolute right-2 top-2 rounded-full bg-[#d4f933] px-1.5 py-0.2 text-[8px] font-extrabold text-black">
-                            {btn.badge}
+                          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#d4f933] px-2 py-0.5 text-[8px] font-extrabold text-black shadow">
+                            <Flame className="h-2.5 w-2.5 fill-current" />
+                            {btn.badge.replace(/[🔥🔞⚡🎁]/g, '').trim()}
                           </span>
                         )}
                         <div className="absolute inset-x-0 bottom-0 p-2 text-center">
@@ -939,3 +982,4 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
     </div>
   );
 }
+

@@ -1,24 +1,34 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  ArrowRight,
   Bot as BotIcon,
+  Camera,
   Check,
   CheckCircle2,
   ChevronRight,
   Clock,
   Command,
   Copy,
+  CreditCard,
   ExternalLink,
   Eye,
   EyeOff,
+  Flame,
   Globe,
   Hash,
+  Image as ImageIcon,
+  Instagram,
+  Laptop,
   KeyRound,
   Link2,
   Loader2,
   Lock,
+  MessageCircle,
   MessageSquare,
   MousePointerClick,
+  PhoneCall,
+  Play,
   Plus,
   QrCode,
   Radio,
@@ -28,12 +38,16 @@ import {
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   Sparkles,
+  Tag,
   ToggleLeft,
   ToggleRight,
   Trash2,
+  Video,
   Webhook,
   X,
+  Zap,
 } from 'lucide-react';
 import type { AppState, BotFunnelStageConfig, BotOperatingMode } from '@shared/types';
 import { api } from '../lib/api';
@@ -44,6 +58,30 @@ import { Dot } from './StatusBadge';
 import { useToast } from './Toast';
 import { FlagBrasil, FlagEspanha, FlagUSA, LanguageSelector, type LanguageCode } from './LanguageSelector';
 import type { NavTab } from '../lib/nav';
+
+function IconTikTok({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.49 6.3 6.3 0 0 0 1.86-4.49V8.65a8.21 8.21 0 0 0 4.91 1.62v-3.58h-1z" />
+    </svg>
+  );
+}
+
+function IconWhatsApp({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.29" />
+    </svg>
+  );
+}
+
+function IconTwitterX({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 interface BotsProps {
   state: AppState;
@@ -107,41 +145,46 @@ const PREVIEW_TEASERS = [
   {
     id: 'prev_teaser_sensorial',
     title: 'Provocação Sensorial (Vídeo Sem Tarja)',
-    badge: 'Mais Cliques 🔥',
+    badge: 'Mais Cliques',
+    badgeIcon: 'flame',
     body: 'Gravei um vídeo novo aqui na cama que ficou tão quente que nem o Telegram aguentaria aberto sem censura... 🔥🙈\n\nQuem quiser ver a versão completa sem tarja e sem cortes, clica no botão abaixo e me chama no meu chat privado agora! 👇',
-    ctaText: '🔞 DESTRAVAR VÍDEO COMPLETO NA DM',
+    ctaText: 'DESTRAVAR VÍDEO COMPLETO NA DM',
     tag: 'previas_free',
   },
   {
     id: 'prev_escassez_vagas',
     title: 'Vagas Relâmpago com Desconto (Escassez)',
-    badge: '35% OFF 🎁',
+    badge: '35% OFF',
+    badgeIcon: 'tag',
     body: 'Meninos, vou abrir apenas 5 vagas com 35% de desconto no meu VIP pros 5 primeiros que me chamarem no privado nos próximos minutos! ⏳🎁\n\nQuem entrar agora leva todos os meus conteúdos acumulados + meu WhatsApp pessoal.',
-    ctaText: '🎁 GARANTIR MINHA VAGA COM DESCONTO',
+    ctaText: 'GARANTIR MINHA VAGA COM DESCONTO',
     tag: 'previas_desconto',
   },
   {
     id: 'prev_enquete_recompensa',
     title: 'Enquete com Foto Exclusiva de Recompensa',
-    badge: 'Interativo 😈',
+    badge: 'Interativo',
+    badgeIcon: 'sparkles',
     body: 'Qual lingerie você prefere que eu use hoje à noite? 😈💋\n\n1️⃣ Calcinha de renda vermelha\n2️⃣ Fio dental preto transparente\n3️⃣ Nenhuma (completamente nua)\n\nQuem vier me contar no privado ganha uma foto exclusiva de prévia agora mesmo!',
-    ctaText: '🔥 RESGATAR FOTO DE PRÉVIA NA DM',
+    ctaText: 'RESGATAR FOTO DE PRÉVIA NA DM',
     tag: 'previas_enquete',
   },
   {
     id: 'prev_audio_gemido',
     title: 'Áudio Proibido & Barulho Molhado',
-    badge: 'Sensorial 💦',
+    badge: 'Sensorial',
+    badgeIcon: 'zap',
     body: 'Acabei de gravar um áudio deitada na cama me tocando enquanto pensava em vocês... 💦🤤\n\nSe de fone de ouvido já dá arrepio na espinha, imagina ver o vídeo completo na íntegra no meu canal VIP. Vem falar comigo no privado:',
-    ctaText: '💦 ME CHAMAR NO PRIVADO',
+    ctaText: 'ME CHAMAR NO PRIVADO',
     tag: 'previas_audio',
   },
   {
     id: 'prev_chamada_video',
     title: 'Bônus Chamada de Vídeo Privativa',
-    badge: 'VIP + Chamada ☎️',
+    badge: 'VIP + Chamada',
+    badgeIcon: 'phone',
     body: 'Tô sozinha no quarto e hoje quero companhia... Quem fechar plano vitalício hoje ganha uma chamada de vídeo comigo na hora! ☎️🔥\n\nCorre e me manda uma mensagem na DM antes que eu feche a agenda:',
-    ctaText: '☎️ ME CHAMAR NA DM PRA CHAMADA',
+    ctaText: 'ME CHAMAR NA DM PRA CHAMADA',
     tag: 'previas_chamada',
   },
 ];
@@ -150,7 +193,7 @@ const SOCIAL_PLATFORMS = [
   {
     id: 'bio_insta',
     name: 'Instagram (Bio)',
-    icon: '📸',
+    iconType: 'instagram',
     tag: 'bio_insta',
     bioTemplate: (link: string, name: string) =>
       `💋 ${name} | Conteúdos Proibidos sem Censura 🔥\n🔞 Chamadas de vídeo & arquivos secretos\n👇 Fale comigo no Telegram privado:\n${link}`,
@@ -158,7 +201,7 @@ const SOCIAL_PLATFORMS = [
   {
     id: 'insta_stories',
     name: 'Instagram (Stories / Link)',
-    icon: '🔥',
+    iconType: 'camera',
     tag: 'insta_stories',
     bioTemplate: (link: string, _name: string) =>
       `🔞 Arrasta pra cima ou toca no link pra ver o vídeo completo sem tarja comigo:\n${link}`,
@@ -166,14 +209,14 @@ const SOCIAL_PLATFORMS = [
   {
     id: 'tiktok',
     name: 'TikTok (Bio)',
-    icon: '🎵',
+    iconType: 'tiktok',
     tag: 'tiktok',
     bioTemplate: (link: string, _name: string) => `✨ Sem cortes e sem filtros no Telegram 👇\n${link}`,
   },
   {
     id: 'twitter_x',
     name: 'Twitter / X',
-    icon: '🐦',
+    iconType: 'twitter',
     tag: 'twitter_x',
     bioTemplate: (link: string, _name: string) =>
       `🔥 Meus vídeos mais pesados e sem tarja liberados no Telegram privado 👇\n${link}`,
@@ -181,14 +224,14 @@ const SOCIAL_PLATFORMS = [
   {
     id: 'whatsapp',
     name: 'WhatsApp / Status',
-    icon: '💬',
+    iconType: 'whatsapp',
     tag: 'whatsapp',
     bioTemplate: (link: string, _name: string) => `Oi amor, meu Telegram secreto sem censura tá aqui 👇\n${link}`,
   },
   {
     id: 'previas_free',
     name: 'Grupo de Prévias (CTA DM)',
-    icon: '🔞',
+    iconType: 'radio',
     tag: 'previas_free',
     bioTemplate: (link: string, _name: string) =>
       `👉 Destrave o chat privado diretamente comigo no Telegram:\n${link}`,
@@ -243,6 +286,25 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
   const [botModalCategory, setBotModalCategory] = useState<
     'dm_welcome' | 'plans_upsell' | 'preview_group' | 'recovery' | 'vip_channel' | 'bio_profile'
   >('dm_welcome');
+  const [smartPreviewMode, setSmartPreviewMode] = useState<'telegram' | 'mobile_bio'>('telegram');
+  const [activePreviewCopy, setActivePreviewCopy] = useState<{
+    title: string;
+    body: string;
+    tag: string;
+    discount?: string;
+    mediaType?: 'photo' | 'video' | 'audio';
+    buttons: Array<{ text: string; iconType?: 'sparkles' | 'flame' | 'card' | 'send'; primary?: boolean }>;
+  }>({
+    title: 'Modelo 1: 30% OFF (Cerveja no Bar)',
+    body: 'Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦',
+    tag: 'recupera_30off',
+    discount: '30% OFF',
+    mediaType: 'video',
+    buttons: [
+      { text: 'MENSAL + BÔNUS por R$ 13.93 (30% OFF)', iconType: 'sparkles', primary: true },
+      { text: '1 DIA NO PARAÍSO por R$ 6.93 (30% OFF)', iconType: 'flame', primary: false },
+    ],
+  });
 
   const openBot = state.bots.find((bot) => bot.id === openBotId) || null;
 
@@ -841,30 +903,33 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
               </div>
             )}
 
-            {/* Categorias de Configuração & Operação do Bot 🎛️ */}
+            {/* Categorias de Configuração & Operação do Bot */}
             <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[#202738] bg-[#0c0f16] p-1.5 shadow-md">
               {[
-                { id: 'dm_welcome', label: '1. Boas-Vindas & DM', icon: '💬' },
-                { id: 'plans_upsell', label: '2. Planos & Upsell', icon: '💎' },
-                { id: 'preview_group', label: '3. Grupo de Prévias', icon: '🔞' },
-                { id: 'recovery', label: '4. Recuperação', icon: '⚡' },
-                { id: 'vip_channel', label: '5. Canal VIP', icon: '🛡️' },
-                { id: 'bio_profile', label: '6. Bio Link / Perfil', icon: '🌐' },
-              ].map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setBotModalCategory(cat.id as typeof botModalCategory)}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${
-                    botModalCategory === cat.id
-                      ? 'bg-[#d4f933] text-black shadow-md shadow-[#d4f933]/20'
-                      : 'text-[#8594ab] hover:bg-[#151a24] hover:text-white'
-                  }`}
-                >
-                  <span>{cat.icon}</span>
-                  <span>{cat.label}</span>
-                </button>
-              ))}
+                { id: 'dm_welcome', label: '1. Boas-Vindas & DM', icon: MessageSquare },
+                { id: 'plans_upsell', label: '2. Planos & Upsell', icon: Sparkles },
+                { id: 'preview_group', label: '3. Grupo de Prévias', icon: Radio },
+                { id: 'recovery', label: '4. Recuperação', icon: Zap },
+                { id: 'vip_channel', label: '5. Canal VIP', icon: ShieldCheck },
+                { id: 'bio_profile', label: '6. Bio Link / Perfil', icon: Globe },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setBotModalCategory(cat.id as typeof botModalCategory)}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition ${
+                      botModalCategory === cat.id
+                        ? 'bg-[#d4f933] text-black shadow-md shadow-[#d4f933]/20'
+                        : 'text-[#8594ab] hover:bg-[#151a24] hover:text-white'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* CONTEÚDO CATEGORIZADO */}
@@ -1135,13 +1200,18 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                           key={plat.id}
                           type="button"
                           onClick={() => setSocialPlatform(plat.id)}
-                          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                             socialPlatform === plat.id
                               ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                               : 'border-[#1b2b23] bg-[#08100c] text-[#7d9689] hover:border-emerald-500/40'
                           }`}
                         >
-                          <span>{plat.icon}</span>
+                          {plat.iconType === 'instagram' && <Instagram className="h-3.5 w-3.5 text-pink-400" />}
+                          {plat.iconType === 'camera' && <Camera className="h-3.5 w-3.5 text-purple-400" />}
+                          {plat.iconType === 'tiktok' && <IconTikTok className="h-3.5 w-3.5 text-white" />}
+                          {plat.iconType === 'twitter' && <IconTwitterX className="h-3.5 w-3.5 text-sky-400" />}
+                          {plat.iconType === 'whatsapp' && <IconWhatsApp className="h-3.5 w-3.5 text-emerald-400" />}
+                          {plat.iconType === 'radio' && <Radio className="h-3.5 w-3.5 text-amber-400" />}
                           <span>{plat.name}</span>
                         </button>
                       ))}
@@ -1569,10 +1639,10 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                         type="button"
                         onClick={handleSendTeaserNow}
                         disabled={sendingPreviewTeaser || !openBot.previewGroupId}
-                        className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
+                        className="btn-primary bg-amber-500 text-black hover:bg-amber-400 border-none text-xs font-bold px-3 py-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50 inline-flex items-center gap-1.5"
                       >
                         {sendingPreviewTeaser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                        Disparar Prévia Agora 🚀
+                        Disparar Prévia Agora
                       </button>
                     </div>
 
@@ -1581,16 +1651,31 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                       {PREVIEW_TEASERS.map((teaser) => (
                         <div
                           key={teaser.id}
-                          onClick={() => setSelectedTeaserTemplateId(teaser.id)}
+                          onClick={() => {
+                            setSelectedTeaserTemplateId(teaser.id);
+                            setActivePreviewCopy({
+                              title: teaser.title,
+                              body: teaser.body,
+                              tag: teaser.tag,
+                              discount: teaser.badge,
+                              mediaType: teaser.id.includes('video') ? 'video' : teaser.id.includes('audio') ? 'audio' : 'photo',
+                              buttons: [{ text: teaser.ctaText, iconType: 'sparkles', primary: true }],
+                            });
+                          }}
                           className={`cursor-pointer rounded-xl border p-2.5 transition ${
                             selectedTeaserTemplateId === teaser.id
-                              ? 'border-amber-400 bg-amber-500/15 text-white'
+                              ? 'border-amber-400 bg-amber-500/15 text-white shadow-[0_0_12px_rgba(251,191,36,0.15)]'
                               : 'border-[#2d2217] bg-[#100d09] text-[#8d7c69] hover:border-amber-500/30'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-white">{teaser.title}</span>
-                            <span className="rounded bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300">
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                              {teaser.badgeIcon === 'flame' && <Flame className="h-3 w-3 text-amber-400" />}
+                              {teaser.badgeIcon === 'tag' && <Tag className="h-3 w-3 text-amber-400" />}
+                              {teaser.badgeIcon === 'sparkles' && <Sparkles className="h-3 w-3 text-amber-400" />}
+                              {teaser.badgeIcon === 'zap' && <Zap className="h-3 w-3 text-amber-400" />}
+                              {teaser.badgeIcon === 'phone' && <PhoneCall className="h-3 w-3 text-amber-400" />}
                               {teaser.badge}
                             </span>
                           </div>
@@ -1598,8 +1683,10 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                             {teaser.body}
                           </p>
                           <div className="mt-2 flex items-center justify-between text-[9px] text-amber-400 font-bold">
-                            <span>Botão: {teaser.ctaText}</span>
-                            <span className="text-emerald-400">Tag: ?start={teaser.tag}</span>
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" /> Botão: {teaser.ctaText}
+                            </span>
+                            <span className="text-emerald-400 font-mono">Tag: ?start={teaser.tag}</span>
                           </div>
                         </div>
                       ))}
@@ -1633,35 +1720,51 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                         setOpenBotId(null);
                         onNavigate('campaigns');
                       }}
-                      className="btn-ghost text-xs text-emerald-400 hover:underline"
+                      className="btn-ghost text-xs text-emerald-400 hover:underline flex items-center gap-1"
                     >
-                      Automações & Disparos →
+                      Automações & Disparos <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {/* Modelo 1: 30% OFF (Sensorial & Desejo) */}
-                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                    <div
+                      onClick={() =>
+                        setActivePreviewCopy({
+                          title: 'Modelo 1: 30% OFF (Cerveja no Bar)',
+                          body: 'Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦',
+                          tag: 'recupera_30off',
+                          discount: '30% OFF',
+                          mediaType: 'video',
+                          buttons: [
+                            { text: 'MENSAL + BÔNUS por R$ 13.93 (30% OFF)', iconType: 'sparkles', primary: true },
+                            { text: '1 DIA NO PARAÍSO por R$ 6.93 (30% OFF)', iconType: 'flame', primary: false },
+                          ],
+                        })
+                      }
+                      className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5 cursor-pointer hover:border-emerald-500/40 transition"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white">Modelo 1: 30% OFF (Cerveja no Bar)</span>
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                          🔥 Campeão de Vendas
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                          <Flame className="h-3 w-3 text-emerald-400" /> Campeão de Vendas
                         </span>
                       </div>
                       <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
                         Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦
                       </div>
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          MENSAL + 🎁 por R$ 13.93 (30% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Sparkles className="h-3.5 w-3.5 text-[#d4f933]" /> MENSAL + BÔNUS por R$ 13.93 (30% OFF)
                         </div>
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          1 DIA NO PARAISO 😈 por R$ 6.93 (30% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Flame className="h-3.5 w-3.5 text-rose-300" /> 1 DIA NO PARAÍSO por R$ 6.93 (30% OFF)
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           void navigator.clipboard.writeText(
                             'Tá com medo de pagar caro? 30% OFF = você gasta menos que uma cerveja no bar e ainda leva minha buc3t4 virando o olho na tela do celular. 🍺➡️💦'
                           );
@@ -1674,27 +1777,43 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                     </div>
 
                     {/* Modelo 2: 25% OFF (Barulho Molhado & WhatsApp) */}
-                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                    <div
+                      onClick={() =>
+                        setActivePreviewCopy({
+                          title: 'Modelo 2: 25% OFF (Áudio Molhado)',
+                          body: 'Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...',
+                          tag: 'recupera_25off',
+                          discount: '25% OFF',
+                          mediaType: 'audio',
+                          buttons: [
+                            { text: 'MENSAL + BÔNUS por R$ 14.93 (25% OFF)', iconType: 'sparkles', primary: true },
+                            { text: '1 DIA NO PARAÍSO por R$ 7.43 (25% OFF)', iconType: 'flame', primary: false },
+                          ],
+                        })
+                      }
+                      className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5 cursor-pointer hover:border-emerald-500/40 transition"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white">Modelo 2: 25% OFF (Áudio Molhado)</span>
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                          💦 Alta Conversão
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                          <Sparkles className="h-3 w-3 text-emerald-400" /> Alta Conversão
                         </span>
                       </div>
                       <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
                         Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...
                       </div>
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          MENSAL + 🎁 por R$ 14.93 (25% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Sparkles className="h-3.5 w-3.5 text-[#d4f933]" /> MENSAL + BÔNUS por R$ 14.93 (25% OFF)
                         </div>
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          1 DIA NO PARAISO 😈 por R$ 7.43 (25% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Flame className="h-3.5 w-3.5 text-rose-300" /> 1 DIA NO PARAÍSO por R$ 7.43 (25% OFF)
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           void navigator.clipboard.writeText(
                             'Quer ouvir o barulho molhado? Eu gravei o som da minha buc3t4 sendo lambida com a língua dele (meu dedo). 25% OFF e você recebe o audio e o video no WhatsApp agora...'
                           );
@@ -1707,27 +1826,43 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                     </div>
 
                     {/* Modelo 3: 40% OFF (Escassez Relâmpago) */}
-                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                    <div
+                      onClick={() =>
+                        setActivePreviewCopy({
+                          title: 'Modelo 3: 40% OFF (Última Chamada)',
+                          body: 'Sumiu vida? O sistema vai cancelar seu acesso promocional... Liberei 40% OFF só até a meia-noite pra você ver meus vídeos pelada e me mandar direct na hora. ⏳🥵',
+                          tag: 'recupera_40off',
+                          discount: '40% OFF',
+                          mediaType: 'photo',
+                          buttons: [
+                            { text: 'MENSAL + BÔNUS por R$ 11.90 (40% OFF)', iconType: 'sparkles', primary: true },
+                            { text: '1 DIA NO PARAÍSO por R$ 5.90 (40% OFF)', iconType: 'flame', primary: false },
+                          ],
+                        })
+                      }
+                      className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5 cursor-pointer hover:border-emerald-500/40 transition"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white">Modelo 3: 40% OFF (Última Chamada)</span>
-                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">
-                          ⏳ Escassez
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                          <Clock className="h-3 w-3 text-amber-400" /> Escassez Relâmpago
                         </span>
                       </div>
                       <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
                         Sumiu vida? O sistema vai cancelar seu acesso promocional... Liberei 40% OFF só até a meia-noite pra você ver meus vídeos pelada e me mandar direct na hora. ⏳🥵
                       </div>
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          MENSAL + 🎁 por R$ 11.90 (40% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Sparkles className="h-3.5 w-3.5 text-[#d4f933]" /> MENSAL + BÔNUS por R$ 11.90 (40% OFF)
                         </div>
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          1 DIA NO PARAISO 😈 por R$ 5.90 (40% OFF)
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <Flame className="h-3.5 w-3.5 text-rose-300" /> 1 DIA NO PARAÍSO por R$ 5.90 (40% OFF)
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           void navigator.clipboard.writeText(
                             'Sumiu vida? O sistema vai cancelar seu acesso promocional... Liberei 40% OFF só até a meia-noite pra você ver meus vídeos pelada e me mandar direct na hora. ⏳🥵'
                           );
@@ -1740,27 +1875,43 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                     </div>
 
                     {/* Modelo 4: PIX Pendente */}
-                    <div className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5">
+                    <div
+                      onClick={() =>
+                        setActivePreviewCopy({
+                          title: 'Modelo 4: PIX Gerado Pendente',
+                          body: 'Vi que você gerou a chave PIX mas ainda não confirmou... Se pagar agora, eu te mando um áudio gemendo seu nome no WhatsApp além do link VIP instantâneo! 💦💋',
+                          tag: 'pix_pendente',
+                          discount: 'Bônus Áudio',
+                          mediaType: 'audio',
+                          buttons: [
+                            { text: 'COPIAR CÓDIGO PIX AGORA', iconType: 'card', primary: true },
+                            { text: 'ENVIAR COMPROVANTE NA DM', iconType: 'send', primary: false },
+                          ],
+                        })
+                      }
+                      className="space-y-2.5 rounded-xl border border-[#1b2f24] bg-[#07120c] p-3.5 cursor-pointer hover:border-emerald-500/40 transition"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white">Modelo 4: PIX Gerado Pendente</span>
-                        <span className="rounded bg-purple-500/20 px-2 py-0.5 text-[9px] font-bold text-purple-300">
-                          ⚡ Resgate de Carrinho
+                        <span className="inline-flex items-center gap-1 rounded bg-purple-500/20 px-2 py-0.5 text-[9px] font-bold text-purple-300">
+                          <Zap className="h-3 w-3 text-purple-400" /> Resgate de Carrinho
                         </span>
                       </div>
                       <div className="rounded-xl border border-emerald-500/20 bg-[#0a1710] p-3 text-xs leading-relaxed text-[#c2dfd1]">
                         Vi que você gerou a chave PIX mas ainda não confirmou... Se pagar agora, eu te mando um áudio gemendo seu nome no WhatsApp além do link VIP instantâneo! 💦💋
                       </div>
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-center rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
-                          COPIAR CÓDIGO PIX AGORA ⚡
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#2e6d30] py-2 text-xs font-bold text-white shadow">
+                          <CreditCard className="h-3.5 w-3.5 text-[#d4f933]" /> COPIAR CÓDIGO PIX AGORA
                         </div>
-                        <div className="flex items-center justify-center rounded-lg bg-[#1f4a21] py-2 text-xs font-bold text-white shadow">
-                          ENVIAR COMPROVANTE NA DM 🧾
+                        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-[#1f4a21] py-2 text-xs font-bold text-white shadow">
+                          <Send className="h-3.5 w-3.5 text-emerald-300" /> ENVIAR COMPROVANTE NA DM
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           void navigator.clipboard.writeText(
                             'Vi que você gerou a chave PIX mas ainda não confirmou... Se pagar agora, eu te mando um áudio gemendo seu nome no WhatsApp além do link VIP instantâneo! 💦💋'
                           );
@@ -1772,6 +1923,142 @@ export function Bots({ state, refresh, onNavigate }: BotsProps) {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Simulador Inteligente de Preview (Multi-Modo & Detecção de Conteúdo) */}
+                <div className="rounded-2xl border border-[#233328] bg-[#09110d] p-4 shadow-xl space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1b2b20] pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <Eye className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                          Visualizador Inteligente de Preview (Simulador em Tempo Real)
+                        </h4>
+                        <p className="text-[10px] text-[#789484]">
+                          Reconhece o formato da mensagem, mídias e botões com precisão milimétrica.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Seletor de Modo de Preview Vetorizado */}
+                    <div className="flex items-center gap-1 rounded-xl border border-[#1e2f24] bg-[#050c08] p-1">
+                      <button
+                        type="button"
+                        onClick={() => setSmartPreviewMode('telegram')}
+                        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                          smartPreviewMode === 'telegram'
+                            ? 'bg-emerald-500 text-black shadow'
+                            : 'text-[#7d998a] hover:text-white'
+                        }`}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>Telegram DM Real</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSmartPreviewMode('mobile_bio')}
+                        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                          smartPreviewMode === 'mobile_bio'
+                            ? 'bg-emerald-500 text-black shadow'
+                            : 'text-[#7d998a] hover:text-white'
+                        }`}
+                      >
+                        <Smartphone className="h-3.5 w-3.5" />
+                        <span>Mobile Bio Link</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Indicadores de Reconhecimento Inteligente */}
+                  <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                    <span className="text-[#6d8a7a] font-semibold">Reconhecimento Automático:</span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-bold text-sky-300">
+                      <Tag className="h-3 w-3" /> Tag: ?start={activePreviewCopy.tag}
+                    </span>
+                    {activePreviewCopy.discount && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 font-bold text-emerald-300">
+                        <Sparkles className="h-3 w-3" /> Desconto: {activePreviewCopy.discount}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-400/10 px-2 py-0.5 font-bold text-purple-300">
+                      <ShieldCheck className="h-3 w-3" /> Checkout SyncPay Blindado
+                    </span>
+                  </div>
+
+                  {/* Renderização Realista Conforme Modo Escolhido */}
+                  {smartPreviewMode === 'telegram' ? (
+                    <div className="rounded-xl border border-[#1b2b20] bg-[#060e0a] p-4">
+                      <div className="flex items-start gap-3 max-w-lg mx-auto">
+                        <Avatar src={openBot.avatarUrl} name={openBot.firstName} size="sm" />
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white flex items-center gap-1">
+                              {openBot.firstName}
+                              <CheckCircle2 className="h-3 w-3 fill-sky-400 text-white" />
+                            </span>
+                            <span className="text-[10px] text-[#557062]">14:38</span>
+                          </div>
+
+                          <div className="rounded-2xl rounded-tl-sm border border-[#1f382a] bg-[#0c1f15] p-3 text-xs leading-relaxed text-[#d7ede2] whitespace-pre-line shadow">
+                            {activePreviewCopy.body}
+                          </div>
+
+                          {/* Botões Inline do Telegram Real */}
+                          <div className="space-y-1.5 pt-1">
+                            {activePreviewCopy.buttons.map((btn, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-center gap-2 rounded-xl py-2 px-3 text-xs font-bold shadow transition cursor-pointer ${
+                                  btn.primary
+                                    ? 'bg-[#2b6b2e] text-white hover:bg-[#348038]'
+                                    : 'bg-[#204a23] text-[#d4f933] hover:bg-[#285c2b]'
+                                }`}
+                              >
+                                {btn.iconType === 'sparkles' && <Sparkles className="h-3.5 w-3.5 text-[#d4f933]" />}
+                                {btn.iconType === 'flame' && <Flame className="h-3.5 w-3.5 text-rose-300" />}
+                                {btn.iconType === 'card' && <CreditCard className="h-3.5 w-3.5 text-emerald-300" />}
+                                {btn.iconType === 'send' && <Send className="h-3.5 w-3.5 text-sky-300" />}
+                                <span>{btn.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Preview Mobile Bio Link */
+                    <div className="rounded-xl border border-[#1b2b20] bg-[#060e0a] p-4 text-center">
+                      <div className="mx-auto max-w-[280px] rounded-2xl border border-white/10 bg-[#0a0d14] p-3 shadow-2xl space-y-2.5">
+                        <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[#10141d]">
+                          <img
+                            src={openBot.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80'}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                          <div className="absolute inset-x-0 bottom-2 text-center">
+                            <span className="text-xs font-bold text-white flex items-center justify-center gap-1">
+                              {openBot.firstName} <CheckCircle2 className="h-3 w-3 fill-sky-400 text-white" />
+                            </span>
+                            <span className="text-[10px] text-white/70">@{openBot.username}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {activePreviewCopy.buttons.map((btn, idx) => (
+                            <div
+                              key={idx}
+                              className="rounded-xl border border-white/15 bg-white/5 py-2 px-2 text-[10px] font-bold text-white flex items-center justify-center gap-1.5"
+                            >
+                              <Link2 className="h-3 w-3 text-[#d4f933]" />
+                              <span className="truncate">{btn.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

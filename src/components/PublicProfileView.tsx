@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
   Instagram,
   Link as LinkIcon,
@@ -289,9 +290,9 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
 
             {/* Contador de Prova Social / Seguidores */}
             <div className="mt-3 flex items-center justify-center">
-              <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-3.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md shadow-sm">
+              <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md shadow-sm">
                 <span>{profile.followersCount} Total Followers</span>
-                <span className="text-white/60">⌄</span>
+                <ChevronDown className="h-3 w-3 text-white/60" />
               </span>
             </div>
           </div>
@@ -403,3 +404,4 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
     </div>
   );
 }
+
