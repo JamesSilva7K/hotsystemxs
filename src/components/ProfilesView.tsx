@@ -35,6 +35,7 @@ import { api } from '../lib/api';
 import { formatNumber, relativeTime } from '../lib/format';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
+import { SmartImageInput } from './SmartImageInput';
 
 function IconTikTok({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
@@ -636,42 +637,57 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
               </div>
 
               {/* Fotos e Efeito Degradê */}
-              <div className="rounded-2xl border border-[#232b3b] bg-[#0c1017] p-4 space-y-3">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-[#8fa0b6]">
-                  3. Fotos & Efeito de Degradê Dark
-                </label>
-                <div>
-                  <span className="text-[10px] text-[#718096]">URL da Foto de Capa / Banner (alta resolução):</span>
-                  <input
-                    value={bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    placeholder="https://.../foto-modelo.jpg"
-                    className="input mt-1 text-xs"
-                    required
-                  />
+              <div className="rounded-2xl border border-[#232b3b] bg-[#0c1017] p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#8fa0b6]">
+                    3. Fotos & Efeito de Degradê Dark
+                  </label>
+                  <span className="text-[10px] text-[#6d7b8f]">Cole prints (Ctrl+V), anexe arquivos ou use URL</span>
                 </div>
+
+                <SmartImageInput
+                  label="Foto de Capa / Banner (alta resolução vertical)"
+                  value={bannerUrl}
+                  onChange={setBannerUrl}
+                  placeholder="Cole uma imagem (Ctrl+V), arraste um arquivo ou insira URL..."
+                  aspectHint="Recomendado vertical 4:5 ou 9:16 (Ex: 1080x1350 ou 1080x1920)"
+                  required
+                />
+
+                <SmartImageInput
+                  label="Foto de Perfil / Avatar Circular (opcional)"
+                  value={avatarUrl}
+                  onChange={setAvatarUrl}
+                  placeholder="Cole o avatar da modelo ou anexe arquivo..."
+                  aspectHint="Recomendado foto de rosto quadrada (1:1)"
+                />
+
                 <div>
                   <span className="text-[10px] text-[#718096]">Efeito de Degradê de Fundo:</span>
-                  <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(
                       [
-                        { id: 'dark-fade', label: 'Dark Fade' },
-                        { id: 'smooth-black', label: 'Pure Black' },
-                        { id: 'violet-glow', label: 'Violet Glow' },
-                        { id: 'rose-glow', label: 'Rose Glow' },
+                        { id: 'dark-fade', label: 'Dark Fade', colorBg: '#07090e' },
+                        { id: 'smooth-black', label: 'Pure Black', colorBg: '#000000' },
+                        { id: 'violet-glow', label: 'Violet Glow', colorBg: '#080312' },
+                        { id: 'rose-glow', label: 'Rose Glow', colorBg: '#0e020b' },
                       ] as const
                     ).map((g) => (
                       <button
                         key={g.id}
                         type="button"
                         onClick={() => setOverlayGradient(g.id)}
-                        className={`rounded-xl border p-2 text-center text-xs font-semibold transition ${
+                        className={`group relative flex items-center justify-center gap-2 rounded-xl border p-2.5 text-center text-xs font-semibold transition ${
                           overlayGradient === g.id
-                            ? 'border-[#d4f933] bg-[#d4f933]/15 text-white'
+                            ? 'border-[#d4f933] bg-[#d4f933]/15 text-white ring-2 ring-[#d4f933]/40'
                             : 'border-[#202736] bg-[#090c12] text-[#808fa5] hover:border-[#313c50]'
                         }`}
                       >
-                        {g.label}
+                        <span
+                          className="h-2.5 w-2.5 rounded-full border border-white/20 shadow-sm"
+                          style={{ backgroundColor: g.colorBg }}
+                        />
+                        <span>{g.label}</span>
                       </button>
                     ))}
                   </div>
@@ -790,15 +806,13 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                         />
                       </div>
 
-                      <div>
-                        <span className="text-[10px] text-[#718096]">Foto de Fundo Provocante do Card:</span>
-                        <input
-                          value={btn.imageUrl || ''}
-                          onChange={(e) => updateButton(index, { imageUrl: e.target.value })}
-                          placeholder="https://.../foto-sensual.jpg"
-                          className="input mt-1 text-xs"
-                        />
-                      </div>
+                      <SmartImageInput
+                        label="Foto de Fundo Provocante do Card (opcional)"
+                        value={btn.imageUrl || ''}
+                        onChange={(val) => updateButton(index, { imageUrl: val })}
+                        placeholder="Cole foto para o card (Ctrl+V), arraste ou insira URL..."
+                        aspectHint="Recomendado foto horizontal 16:9 ou 16:10"
+                      />
                     </div>
                   ))}
                 </div>
@@ -811,119 +825,161 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                 <Sparkles className="h-3.5 w-3.5 text-[#d4f933]" /> Preview em Tempo Real (Mobile)
               </span>
 
-              {/* Moldura de Smartphone Dark */}
-              <div className="w-[320px] rounded-[36px] border-4 border-[#2b3547] bg-[#07090e] shadow-2xl overflow-hidden flex flex-col aspect-[9/18]">
-                {/* Top Notch */}
-                <div className="h-5 bg-black flex items-center justify-center">
-                  <div className="h-3 w-20 rounded-full bg-[#1b2230]" />
-                </div>
+              {/* Moldura de Smartphone Dark com fundo dinâmico conforme degradê */}
+              {(() => {
+                const previewGradientClass =
+                  overlayGradient === 'violet-glow'
+                    ? 'from-transparent via-[#140826]/85 to-[#080312]'
+                    : overlayGradient === 'rose-glow'
+                    ? 'from-transparent via-[#220719]/85 to-[#0e020b]'
+                    : overlayGradient === 'smooth-black'
+                    ? 'from-transparent via-black/85 to-[#000000]'
+                    : 'from-transparent via-[#080b12]/90 to-[#07090e]';
 
-                {/* Conteúdo Renderizado da Bio */}
-                <div className="flex-1 overflow-y-auto no-scrollbar relative">
-                  {/* Banner */}
-                  <div className="relative aspect-[4/5] w-full bg-[#10141d]">
-                    {bannerUrl ? (
-                      <img
-                        src={bannerUrl}
-                        alt=""
-                        className="h-full w-full object-cover object-center"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-xs text-[#556377]">
-                        Sem Foto
+                const previewPhoneBg =
+                  overlayGradient === 'violet-glow'
+                    ? '#080312'
+                    : overlayGradient === 'rose-glow'
+                    ? '#0e020b'
+                    : overlayGradient === 'smooth-black'
+                    ? '#000000'
+                    : '#07090e';
+
+                return (
+                  <div
+                    className="w-[320px] rounded-[36px] border-4 border-[#2b3547] shadow-2xl overflow-hidden flex flex-col aspect-[9/18] transition-colors duration-300"
+                    style={{ backgroundColor: previewPhoneBg }}
+                  >
+                    {/* Top Notch */}
+                    <div className="h-5 bg-black flex items-center justify-center">
+                      <div className="h-3 w-20 rounded-full bg-[#1b2230]" />
+                    </div>
+
+                    {/* Conteúdo Renderizado da Bio */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar relative">
+                      {/* Banner */}
+                      <div className="relative aspect-[4/5] w-full bg-[#10141d]">
+                        {bannerUrl ? (
+                          <img
+                            src={bannerUrl}
+                            alt=""
+                            className="h-full w-full object-cover object-center"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-xs text-[#556377]">
+                            Sem Foto
+                          </div>
+                        )}
+                        {/* Overlay Degradê dinâmico 100% fiel */}
+                        <div className={`absolute inset-0 bg-gradient-to-b ${previewGradientClass}`} />
+
+                        <div className="absolute inset-x-0 bottom-0 p-3 text-center">
+                          {avatarUrl && (
+                            <div className="mb-2 flex justify-center">
+                              <img
+                                src={avatarUrl}
+                                alt=""
+                                className="h-14 w-14 rounded-full border-2 border-white/20 object-cover shadow-2xl"
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-sm font-bold text-white drop-shadow">
+                              {name || 'Nome da Modelo'}
+                            </span>
+                            {verified && (
+                              <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#3b82f6] text-white">
+                                <CheckCircle2 className="h-2.5 w-2.5 fill-current" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-white/70">{handle || '@handle'}</span>
+
+                          {bio && (
+                            <p className="mt-1 text-[10px] text-white/80 line-clamp-2 px-2">
+                              {bio}
+                            </p>
+                          )}
+
+                          {/* Redes Sociais Preview */}
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                            {socialLinks.instagram && (
+                              <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shadow">
+                                <Instagram className="h-3 w-3" />
+                              </div>
+                            )}
+                            {socialLinks.tiktok && (
+                              <div className="h-6 w-6 rounded-full bg-black border border-white/20 flex items-center justify-center text-white shadow">
+                                <IconTikTok className="h-3 w-3" />
+                              </div>
+                            )}
+                            {socialLinks.telegram && (
+                              <div className="h-6 w-6 rounded-full bg-[#24A1DE] flex items-center justify-center text-white shadow">
+                                <Send className="h-3 w-3" />
+                              </div>
+                            )}
+                            {socialLinks.twitter && (
+                              <div className="h-6 w-6 rounded-full bg-[#1DA1F2] flex items-center justify-center text-white shadow">
+                                <IconTwitterX className="h-3 w-3" />
+                              </div>
+                            )}
+                            {socialLinks.whatsapp && (
+                              <div className="h-6 w-6 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow">
+                                <IconWhatsApp className="h-3 w-3" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Seguidores Pill */}
+                          <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[9px] font-medium text-white">
+                            <span>{followersCount || '2.9M'} Total Followers</span>
+                            <ChevronDown className="h-2.5 w-2.5 text-white/70" />
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#07090e]/85 to-[#07090e]" />
 
-                    <div className="absolute inset-x-0 bottom-0 p-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-sm font-bold text-white drop-shadow">
-                          {name || 'Nome da Modelo'}
-                        </span>
-                        {verified && (
-                          <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#3b82f6] text-white">
-                            <CheckCircle2 className="h-2.5 w-2.5 fill-current" />
+                      {/* Cards de Botões Preview */}
+                      <div className="p-3 space-y-2.5">
+                        {buttons.map((btn, idx) => (
+                          <div
+                            key={idx}
+                            className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#121620] aspect-[16/10]"
+                          >
+                            {btn.imageUrl && (
+                              <img
+                                src={btn.imageUrl}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/20" />
+                            <div className="absolute left-2.5 top-2.5 h-6 w-6 rounded-full bg-black/50 text-white flex items-center justify-center border border-white/20">
+                              <Link2 className="h-3 w-3" />
+                            </div>
+                            {btn.badge && (
+                              <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#d4f933] px-2 py-0.5 text-[8px] font-extrabold text-black shadow">
+                                <Flame className="h-2.5 w-2.5 fill-current" />
+                                {btn.badge.replace(/[🔥🔞⚡🎁]/g, '').trim()}
+                              </span>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 p-2 text-center">
+                              <span className="text-[11px] font-bold text-white drop-shadow">
+                                {btn.title}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-white/70">{handle || '@handle'}</span>
-
-                      {/* Redes Sociais Preview */}
-                      <div className="mt-2 flex items-center justify-center gap-2">
-                        {socialLinks.instagram && (
-                          <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shadow">
-                            <Instagram className="h-3 w-3" />
-                          </div>
-                        )}
-                        {socialLinks.tiktok && (
-                          <div className="h-6 w-6 rounded-full bg-black border border-white/20 flex items-center justify-center text-white shadow">
-                            <IconTikTok className="h-3 w-3" />
-                          </div>
-                        )}
-                        {socialLinks.telegram && (
-                          <div className="h-6 w-6 rounded-full bg-[#24A1DE] flex items-center justify-center text-white shadow">
-                            <Send className="h-3 w-3" />
-                          </div>
-                        )}
-                        {socialLinks.twitter && (
-                          <div className="h-6 w-6 rounded-full bg-[#1DA1F2] flex items-center justify-center text-white shadow">
-                            <IconTwitterX className="h-3 w-3" />
-                          </div>
-                        )}
-                        {socialLinks.whatsapp && (
-                          <div className="h-6 w-6 rounded-full bg-[#25D366] flex items-center justify-center text-white shadow">
-                            <IconWhatsApp className="h-3 w-3" />
-                          </div>
-                        )}
+                        ))}
                       </div>
 
-                      {/* Seguidores Pill */}
-                      <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[9px] font-medium text-white">
-                        <span>{followersCount || '2.9M'} Total Followers</span>
-                        <ChevronDown className="h-2.5 w-2.5 text-white/70" />
+                      {/* Rodapé Preview */}
+                      <div className="p-3 text-center text-[8px] text-[#556377]">
+                        Privacy Policy | Terms | Report
                       </div>
                     </div>
                   </div>
-
-                  {/* Cards de Botões Preview */}
-                  <div className="p-3 space-y-2.5">
-                    {buttons.map((btn, idx) => (
-                      <div
-                        key={idx}
-                        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#121620] aspect-[16/10]"
-                      >
-                        {btn.imageUrl && (
-                          <img
-                            src={btn.imageUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/20" />
-                        <div className="absolute left-2.5 top-2.5 h-6 w-6 rounded-full bg-black/50 text-white flex items-center justify-center border border-white/20">
-                          <Link2 className="h-3 w-3" />
-                        </div>
-                        {btn.badge && (
-                          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#d4f933] px-2 py-0.5 text-[8px] font-extrabold text-black shadow">
-                            <Flame className="h-2.5 w-2.5 fill-current" />
-                            {btn.badge.replace(/[🔥🔞⚡🎁]/g, '').trim()}
-                          </span>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 p-2 text-center">
-                          <span className="text-[11px] font-bold text-white drop-shadow">
-                            {btn.title}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Rodapé Preview */}
-                  <div className="p-3 text-center text-[8px] text-[#556377]">
-                    Privacy Policy | Terms | Report
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
 

@@ -150,15 +150,27 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
 
   const gradientClass =
     profile.overlayGradient === 'violet-glow'
-      ? 'from-transparent via-[#090614]/85 to-[#070510]'
+      ? 'from-transparent via-[#140826]/85 to-[#080312]'
       : profile.overlayGradient === 'rose-glow'
-      ? 'from-transparent via-[#13070f]/85 to-[#0e050c]'
+      ? 'from-transparent via-[#220719]/85 to-[#0e020b]'
       : profile.overlayGradient === 'smooth-black'
-      ? 'from-transparent via-black/80 to-black'
-      : 'from-transparent via-[#0a0c12]/90 to-[#07090e]';
+      ? 'from-transparent via-black/85 to-[#000000]'
+      : 'from-transparent via-[#080b12]/90 to-[#07090e]';
+
+  const bgClass =
+    profile.overlayGradient === 'violet-glow'
+      ? '#080312'
+      : profile.overlayGradient === 'rose-glow'
+      ? '#0e020b'
+      : profile.overlayGradient === 'smooth-black'
+      ? '#000000'
+      : '#07090e';
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-white selection:bg-[#d4f933] selection:text-black">
+    <div
+      className="min-h-screen text-white selection:bg-[#d4f933] selection:text-black transition-colors duration-300"
+      style={{ backgroundColor: bgClass }}
+    >
       {/* Botão Flutuante de Compartilhar */}
       <button
         type="button"
