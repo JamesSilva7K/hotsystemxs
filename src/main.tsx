@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')!).render(
 );
 
 // Registrar Service Worker para PWA e Notificações Mobile
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')

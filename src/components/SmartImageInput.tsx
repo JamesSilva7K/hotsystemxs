@@ -324,3 +324,4 @@ export function SmartImageInput({
     </div>
   );
 }
+

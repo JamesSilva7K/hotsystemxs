@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   ArrowRight,
+  Bell,
   Bot as BotIcon,
   CalendarClock,
   CheckCircle2,
@@ -10,16 +11,22 @@ import {
   Plus,
   RefreshCw,
   Send,
+  Smartphone,
   TrendingUp,
   UserPlus,
   Users,
+  Volume2,
+  VolumeX,
   Zap,
 } from 'lucide-react';
 import type { AppState, Lead } from '@shared/types';
 import type { NavTab } from '../lib/nav';
 import { formatNumber, plural, relativeTime, statusLabel, truncate } from '../lib/format';
+import { notifications } from '../lib/notifications';
 import { Avatar } from './Avatar';
 import { StatusBadge } from './StatusBadge';
+import { PwaInstallModal, type BeforeInstallPromptEvent } from './PwaInstallModal';
+import { useToast } from './Toast';
 
 interface DashboardProps {
   state: AppState;
@@ -34,6 +41,64 @@ function dayKey(iso: string): string {
 }
 
 export function Dashboard({ state, selectedBotId, onNavigate, onSync, syncing }: DashboardProps) {
+  const { notify } = useToast();
+  const [soundEnabled, setSoundEnabled] = useState(() => notifications.isSoundEnabled);
+  const [pushStatus, setPushStatus] = useState<'granted' | 'default' | 'denied' | 'unsupported'>('default');
+  const [pwaModalOpen, setPwaModalOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPushStatus(Notification.permission);
+    }
+    const unsub = notifications.onSoundChange(setSoundEnabled);
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      unsub();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    notifications.setSoundEnabled(next);
+    notify(
+      'info',
+      next ? 'Som de Vendas Ativado 🔔' : 'Som de Vendas Silenciado 🔕',
+      next ? 'A sineta de moedas e PIX tocará nas vendas.' : 'Alertas sonoros desativados.'
+    );
+  };
+
+  const handleTestChime = () => {
+    notifications.playSaleChime();
+    notify('success', '🔔 Teste de Som Executado!', 'A sineta de caixa registradora / PIX tocou com sucesso.');
+  };
+
+  const handleEnablePush = async () => {
+    const granted = await notifications.requestPermission();
+    if (granted) {
+      setPushStatus('granted');
+      notify(
+        'success',
+        'Notificações no Aparelho Ativadas!',
+        'Você receberá alertas na tela com valor e horário de cada venda.'
+      );
+      notifications.notifySale({
+        valor: 97.0,
+        leadName: 'Lead VIP (Teste)',
+        botName: selectedBotId === 'all' ? 'Modelo Hot' : bots[0]?.firstName || 'Modelo Hot',
+        tipo: 'Venda de Teste Aprovada',
+      });
+    } else {
+      setPwaModalOpen(true);
+    }
+  };
+
   const bots = selectedBotId === 'all' ? state.bots : state.bots.filter((bot) => bot.id === selectedBotId);
   const leads = useMemo(
     () =>
@@ -254,6 +319,83 @@ export function Dashboard({ state, selectedBotId, onNavigate, onSync, syncing }:
         </div>
       </section>
 
+      {/* Central Avançada de Notificações Mobile & Atalho no Aparelho */}
+      <section className="rounded-3xl border border-[#232b3c] bg-gradient-to-r from-[#121622] via-[#0d1017] to-[#07090e] p-4 sm:p-5 shadow-xl">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-[#d4f933]/30 bg-[#0b0d11] text-[#d4f933] shadow-lg shadow-[#d4f933]/10">
+              <Smartphone className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white sm:text-base">
+                  Alertas na Tela do Celular & Atalho PWA
+                </h3>
+                <span className="rounded-full bg-[#d4f933]/15 px-2 py-0.5 text-[9px] font-black text-[#d4f933]">
+                  SISTEMA OFICIAL
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-[#808ea3] max-w-xl">
+                Receba confirmações de compra com som de caixa registradora e notificação visual direta na tela do aparelho. Adicione à área de trabalho para acesso instantâneo.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Toggle de Som */}
+            <button
+              type="button"
+              onClick={handleToggleSound}
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                soundEnabled
+                  ? 'border-[#d4f933]/40 bg-[#d4f933]/15 text-[#d4f933]'
+                  : 'border-[#242c3d] bg-[#10141d] text-[#6d7b90] hover:text-white'
+              }`}
+              title={soundEnabled ? 'Silenciar som de vendas' : 'Ativar som de vendas'}
+            >
+              {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+              <span>{soundEnabled ? 'Som Ativo' : 'Som Silenciado'}</span>
+            </button>
+
+            {/* Testar Som */}
+            <button
+              type="button"
+              onClick={handleTestChime}
+              className="btn-secondary px-3 py-2 text-xs"
+              title="Testar sineta de venda / PIX"
+            >
+              Testar Som 🔔
+            </button>
+
+            {/* Notificações no Aparelho */}
+            <button
+              type="button"
+              onClick={handleEnablePush}
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                pushStatus === 'granted'
+                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
+                  : 'btn-secondary text-[#c2cfdf]'
+              }`}
+            >
+              <Bell className="h-3.5 w-3.5" />
+              <span>
+                {pushStatus === 'granted' ? 'Notificações Ativas' : 'Permitir Notificações no Celular'}
+              </span>
+            </button>
+
+            {/* Criar Atalho Celular */}
+            <button
+              type="button"
+              onClick={() => setPwaModalOpen(true)}
+              className="btn-primary px-3.5 py-2 text-xs flex items-center gap-1.5 shadow-md shadow-[#d4f933]/15"
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+              <span>Instalar Atalho no Celular</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Leads totais', value: leads.length, icon: Users, detail: `${plural(newLeads, 'novo', 'novos')} em 7 dias` },
@@ -470,6 +612,12 @@ export function Dashboard({ state, selectedBotId, onNavigate, onSync, syncing }:
           </div>
         ))}
       </section>
+
+      <PwaInstallModal
+        open={pwaModalOpen}
+        onClose={() => setPwaModalOpen(false)}
+        deferredPrompt={deferredPrompt}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // Hot System Service Worker (PWA & Push Notifications)
-const CACHE_NAME = 'hotsystem-v2';
+const CACHE_NAME = 'hotsystem-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -20,7 +20,11 @@ self.addEventListener('activate', (event) => {
 
 // Suporte a Push Notifications personalizadas (Vendas, PIX gerado)
 self.addEventListener('push', (event) => {
-  let data = { title: '⚡ Hot System Notificação', body: 'Nova atualização no sistema', icon: '/favicon.svg' };
+  let data = {
+    title: '💰 Venda Aprovada · Hot System VIP',
+    body: 'Novo pagamento confirmado pelo webhook!',
+    icon: '/icon-192.png',
+  };
   try {
     if (event.data) {
       data = event.data.json();
@@ -30,11 +34,14 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || '⚡ Hot System VIP', {
+    self.registration.showNotification(data.title || '💰 Hot System VIP', {
       body: data.body,
-      icon: data.icon || '/favicon.svg',
-      badge: '/favicon.svg',
-      vibrate: [200, 100, 200],
+      icon: data.icon || '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200, 100, 200],
+      tag: data.tag || 'hot-system-sale',
+      renotify: true,
+      requireInteraction: true,
       data: data.url || '/',
     })
   );
@@ -55,4 +62,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-

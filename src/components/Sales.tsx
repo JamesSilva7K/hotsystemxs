@@ -21,6 +21,7 @@ import { formatBRL, formatDate, formatFullDate, formatNumber } from '../lib/form
 import { Modal } from './Modal';
 import { TelegramPreview } from './TelegramPreview';
 import { useToast } from './Toast';
+import { notifications } from '../lib/notifications';
 
 interface SalesProps {
   state: AppState;
@@ -314,6 +315,14 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
         status: manualForm.status,
         notes: manualForm.notes || undefined,
       });
+      if (manualForm.status === 'pago') {
+        notifications.notifySale({
+          valor: parsePriceToCents(manualForm.amount) / 100,
+          leadName: manualForm.notes || 'Venda Manual',
+          botName: state.bots.find((b) => b.id === manualForm.botId)?.firstName || 'Modelo Hot',
+          tipo: 'Venda Manual Confirmada',
+        });
+      }
       notify('success', 'Venda registrada', 'Se estava como paga, o acesso foi entregue.');
       setManualOpen(false);
       await refresh();
@@ -329,6 +338,12 @@ export function Sales({ state, selectedBotId, refresh }: SalesProps) {
     try {
       const result = await api.updatePurchase(purchase.id, { status });
       if (status === 'pago') {
+        notifications.notifySale({
+          valor: purchase.amountCents / 100,
+          leadName: purchase.customerName || 'Cliente VIP',
+          botName: state.bots.find((b) => b.id === purchase.botId)?.firstName || 'Modelo Hot',
+          tipo: 'Pagamento Confirmado',
+        });
         notify(
           result.delivered ? 'success' : 'info',
           result.delivered ? 'Pagamento confirmado' : 'Pago, entrega pendente',
