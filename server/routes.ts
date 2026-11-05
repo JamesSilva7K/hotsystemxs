@@ -10,7 +10,7 @@ import type {
 } from '../shared/types.js';
 import { CRON_SECRET, VERSION } from './config.js';
 import { buildFollowUp, isWithinWindow, restartFollowUpForLead, runFollowUps, stopFollowUpForLead } from './followups.js';
-import { runDueCampaigns } from './messaging.js';
+import { runDueCampaigns, runDuePreviewMessages } from './messaging.js';
 import {
   applySyncPayWebhook,
   checkWebhookToken,
@@ -86,11 +86,13 @@ export function registerPublicRoutes(app: Express): void {
     }
     const started = Date.now();
     const campaigns = await runDueCampaigns();
+    const previews = await runDuePreviewMessages();
     const followUps = await runFollowUps(new Date(), 20);
     return res.json({
       ok: true,
       version: VERSION,
       campaigns,
+      previews,
       followUps,
       ms: Date.now() - started,
       next: store.getPublicState().automation.nextRunAt,
