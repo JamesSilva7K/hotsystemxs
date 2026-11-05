@@ -190,18 +190,20 @@ export async function setWebhook(
 export async function getUpdates(
   token: string,
   offset: number,
-  limit = 100
+  limit = 100,
+  timeout = 0
 ): Promise<TelegramUpdate[]> {
+  const callTimeoutMs = Math.max(25_000, (timeout + 10) * 1_000);
   return callTelegram<TelegramUpdate[]>(
     token,
     'getUpdates',
     {
       offset,
       limit,
-      timeout: 0,
+      timeout,
       allowed_updates: ['message', 'edited_message', 'callback_query', 'my_chat_member', 'chat_member'],
     },
-    25_000
+    callTimeoutMs
   );
 }
 

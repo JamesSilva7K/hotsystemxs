@@ -24,6 +24,7 @@ import {
   verifySession,
 } from './security.js';
 import { newId, store, type StoredBot } from './store.js';
+import { botSupervisor } from './botRunner.js';
 import {
   deleteWebhook,
   downloadBotAvatar,
@@ -219,7 +220,7 @@ app.post(
   })
 );
 
-// ---------- Saúde ----------
+// ---------- Saúde & Vigilância 24/7 ----------
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -228,6 +229,14 @@ app.get('/api/health', (_req, res) => {
     uptimeSeconds: Math.round(process.uptime()),
     polling: POLLING_ENABLED,
     storage: 'ok',
+    botEngine: botSupervisor.getStatus(),
+  });
+});
+
+app.get('/api/bots/engine/status', (_req, res) => {
+  res.json({
+    ok: true,
+    ...botSupervisor.getStatus(),
   });
 });
 

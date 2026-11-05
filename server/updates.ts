@@ -16,6 +16,7 @@ import {
   getUpdates,
   normalizeTelegramError,
   sendText,
+  TelegramError,
   type TelegramMessage,
   type TelegramUpdate,
 } from './telegram.js';
@@ -532,11 +533,15 @@ export function processTelegramUpdate(botId: string, update: TelegramUpdate): Pr
   return current;
 }
 
-export async function syncBotUpdates(botId: string): Promise<{
+export async function syncBotUpdates(
+  botId: string,
+  timeoutSeconds = 0
+): Promise<{
   ok: boolean;
   processed: number;
   leads: number;
   error?: string;
+  retryAfter?: number;
 }> {
   const existing = syncLocks.get(botId);
   if (existing) {
@@ -560,7 +565,7 @@ export async function syncBotUpdates(botId: string): Promise<{
     }
     const beforeLeads = store.rawLeads.length;
     try {
-      const updates = await getUpdates(token, bot.offset);
+      const updates = await getUpdates(token, bot.offset, 100, timeoutSeconds);
       for (const update of updates) {
         await processTelegramUpdate(bot.id, update);
       }
@@ -583,12 +588,13 @@ export async function syncBotUpdates(botId: string): Promise<{
       };
     } catch (error) {
       const message = normalizeTelegramError(error);
+      const retryAfter = error instanceof TelegramError && error.retryAfter ? error.retryAfter : undefined;
       store.updateBot(bot.id, {
         status: 'degraded',
         lastError: message,
         lastSyncAt: new Date().toISOString(),
       });
-      return { ok: false, processed: 0, leads: 0, error: message };
+      return { ok: false, processed: 0, leads: 0, error: message, retryAfter };
     }
   })();
   syncLocks.set(botId, run);
