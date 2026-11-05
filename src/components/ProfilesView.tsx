@@ -113,6 +113,15 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
 
   const baseUrl = (state.server.publicBaseUrl || window.location.origin).replace(/\/$/, '');
 
+  // Métricas Consolidadas 100% REAIS de todos os links de bio
+  const totalViews = profiles.reduce((acc, p) => acc + (p.metrics?.views || 0), 0);
+  const totalUniques = profiles.reduce((acc, p) => acc + (p.metrics?.uniqueVisitors || 0), 0);
+  const totalClicks = profiles.reduce((acc, p) => acc + (p.metrics?.clicks || 0), 0);
+  const totalExits = profiles.reduce((acc, p) => acc + (p.metrics?.exits || 0), 0);
+  const avgCtr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : '0.0';
+  const avgRetention =
+    totalViews > 0 ? Math.max(0, 100 - (totalExits / totalViews) * 100).toFixed(1) : '100.0';
+
   const openCreateModal = () => {
     setEditingProfile(null);
     const defaultBot = state.bots[0]?.id || '';
@@ -337,6 +346,51 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
         </div>
       </section>
 
+      {/* Barra Executiva de Métricas 100% REAIS Consolidadas */}
+      {profiles.length > 0 && (
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="card p-3.5 border border-[#1e2535] bg-[#0c1017]">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#738297] flex items-center gap-1.5">
+              <Eye className="h-3 w-3 text-sky-400" /> Entradas / Views
+            </span>
+            <div className="mt-1 text-lg font-bold text-white">{formatNumber(totalViews)}</div>
+            <span className="text-[10px] text-[#556377]">Total de acessos</span>
+          </div>
+
+          <div className="card p-3.5 border border-[#1e2535] bg-[#0c1017]">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#738297] flex items-center gap-1.5">
+              <Users className="h-3 w-3 text-purple-400" /> Visitantes Únicos
+            </span>
+            <div className="mt-1 text-lg font-bold text-white">{formatNumber(totalUniques)}</div>
+            <span className="text-[10px] text-[#556377]">IP / Dispositivo real</span>
+          </div>
+
+          <div className="card p-3.5 border border-[#1e2535] bg-[#0c1017]">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#738297] flex items-center gap-1.5">
+              <MousePointerClick className="h-3 w-3 text-[#d4f933]" /> Cliques nos Botões
+            </span>
+            <div className="mt-1 text-lg font-bold text-[#d4f933]">{formatNumber(totalClicks)}</div>
+            <span className="text-[10px] text-[#556377]">Destinos acionados</span>
+          </div>
+
+          <div className="card p-3.5 border border-[#1e2535] bg-[#0c1017]">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#738297] flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 text-emerald-400" /> CTR / Conversão
+            </span>
+            <div className="mt-1 text-lg font-bold text-emerald-400">{avgCtr}%</div>
+            <span className="text-[10px] text-[#556377]">Taxa clique/visita</span>
+          </div>
+
+          <div className="card p-3.5 border border-[#1e2535] bg-[#0c1017] col-span-2 sm:col-span-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#738297] flex items-center gap-1.5">
+              <Zap className="h-3 w-3 text-amber-400" /> Saídas Registradas
+            </span>
+            <div className="mt-1 text-lg font-bold text-white">{formatNumber(totalExits)}</div>
+            <span className="text-[10px] text-[#556377]">Retenção: {avgRetention}%</span>
+          </div>
+        </section>
+      )}
+
       {/* Grid de Perfis Cadastrados */}
       {filteredProfiles.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[#263042] bg-[#0c1017] p-12 text-center">
@@ -429,66 +483,92 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
 
                 {/* Métricas 100% REAIS da Página */}
                 <div className="p-4 space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="grid grid-cols-4 gap-2 rounded-2xl border border-[#202736] bg-[#090c12] p-2.5 text-center">
+                  <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-[#202736] bg-[#090c12] p-2.5 text-center">
                     <div>
-                      <div className="flex items-center justify-center text-[10px] text-[#6d7b8f]">
-                        <Eye className="mr-0.5 h-3 w-3" /> Views
+                      <div className="flex items-center justify-center text-[9px] text-[#6d7b8f]">
+                        <Eye className="mr-0.5 h-2.5 w-2.5 text-sky-400" /> Entradas
                       </div>
-                      <div className="text-sm font-bold text-white">{formatNumber(p.metrics.views)}</div>
+                      <div className="text-xs font-bold text-white mt-0.5">{formatNumber(p.metrics.views)}</div>
                     </div>
                     <div>
-                      <div className="flex items-center justify-center text-[10px] text-[#6d7b8f]">
-                        <Users className="mr-0.5 h-3 w-3" /> Únicos
+                      <div className="flex items-center justify-center text-[9px] text-[#6d7b8f]">
+                        <Users className="mr-0.5 h-2.5 w-2.5 text-purple-400" /> Únicos
                       </div>
-                      <div className="text-sm font-bold text-white">
+                      <div className="text-xs font-bold text-white mt-0.5">
                         {formatNumber(p.metrics.uniqueVisitors)}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center justify-center text-[10px] text-[#6d7b8f]">
-                        <MousePointerClick className="mr-0.5 h-3 w-3" /> Cliques
+                      <div className="flex items-center justify-center text-[9px] text-[#6d7b8f]">
+                        <MousePointerClick className="mr-0.5 h-2.5 w-2.5 text-[#d4f933]" /> Cliques
                       </div>
-                      <div className="text-sm font-bold text-[#d4f933]">
+                      <div className="text-xs font-bold text-[#d4f933] mt-0.5">
                         {formatNumber(p.metrics.clicks)}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center justify-center text-[10px] text-[#6d7b8f]">
+                      <div className="flex items-center justify-center text-[9px] text-[#6d7b8f]">
+                        <Zap className="mr-0.5 h-2.5 w-2.5 text-amber-400" /> Saídas
+                      </div>
+                      <div className="text-xs font-bold text-white mt-0.5">
+                        {formatNumber(p.metrics.exits || 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-center text-[9px] text-[#6d7b8f]">
                         CTR
                       </div>
-                      <div className="text-sm font-bold text-emerald-400">{ctr}%</div>
+                      <div className="text-xs font-bold text-emerald-400 mt-0.5">{ctr}%</div>
                     </div>
                   </div>
 
-                  {/* Prévia dos Botões Cadastrados com Cliques Reais */}
+                  {/* Prévia dos Botões Cadastrados com Cliques Reais e Barra de Conversão */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#758498]">
-                      <span>Botões / Cards ({p.buttons.length})</span>
-                      <span>Cliques</span>
+                      <span>Cards & Destinos ({p.buttons.length})</span>
+                      <span>Cliques Reais</span>
                     </div>
-                    <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                      {p.buttons.map((b) => (
-                        <div
-                          key={b.id}
-                          className="flex items-center justify-between rounded-xl border border-[#1b2230] bg-[#121620] px-3 py-1.5 text-xs"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {b.imageUrl ? (
-                              <img
-                                src={b.imageUrl}
-                                alt=""
-                                className="h-5 w-5 rounded object-cover shrink-0"
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {p.buttons.map((b) => {
+                        const buttonShare =
+                          p.metrics.clicks > 0
+                            ? Math.round(((b.clicks || 0) / p.metrics.clicks) * 100)
+                            : 0;
+                        return (
+                          <div
+                            key={b.id}
+                            className="space-y-1 rounded-xl border border-[#1b2230] bg-[#121620] p-2 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {b.imageUrl ? (
+                                  <img
+                                    src={b.imageUrl}
+                                    alt=""
+                                    className="h-6 w-6 rounded object-cover shrink-0 border border-white/10"
+                                  />
+                                ) : (
+                                  <Link2 className="h-3.5 w-3.5 text-[#d4f933] shrink-0" />
+                                )}
+                                <span className="truncate text-white font-medium text-[11px]">{b.title}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="mono rounded bg-[#d4f933]/15 px-1.5 py-0.2 text-[10px] font-bold text-[#d4f933]">
+                                  {b.clicks || 0} cliques
+                                </span>
+                                <span className="text-[9px] text-[#78889e]">{buttonShare}%</span>
+                              </div>
+                            </div>
+                            {/* Barra de progresso do botão */}
+                            <div className="h-1 w-full rounded-full bg-[#1b2230] overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-emerald-500 to-[#d4f933] rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min(100, buttonShare)}%` }}
                               />
-                            ) : (
-                              <Link2 className="h-3.5 w-3.5 text-[#d4f933] shrink-0" />
-                            )}
-                            <span className="truncate text-white font-medium">{b.title}</span>
+                            </div>
                           </div>
-                          <span className="mono rounded bg-[#d4f933]/15 px-1.5 py-0.2 text-[10px] font-bold text-[#d4f933]">
-                            {b.clicks} cliques
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -846,14 +926,27 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                     : '#07090e';
 
                 return (
-                  <div
-                    className="w-[320px] rounded-[36px] border-4 border-[#2b3547] shadow-2xl overflow-hidden flex flex-col aspect-[9/18] transition-colors duration-300"
-                    style={{ backgroundColor: previewPhoneBg }}
-                  >
-                    {/* Top Notch */}
-                    <div className="h-5 bg-black flex items-center justify-center">
-                      <div className="h-3 w-20 rounded-full bg-[#1b2230]" />
-                    </div>
+                  <div className="relative p-3.5 rounded-[44px] overflow-hidden border border-white/10 shadow-2xl bg-black/40">
+                    {/* Fundo Difuso Ambiental idêntico às imagens de referência */}
+                    {bannerUrl && (
+                      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+                        <img
+                          src={bannerUrl}
+                          alt=""
+                          className="h-full w-full object-cover scale-150 filter blur-2xl opacity-40"
+                        />
+                        <div className="absolute inset-0 bg-black/75" />
+                      </div>
+                    )}
+
+                    <div
+                      className="w-[310px] rounded-[34px] border-4 border-[#2b3547] shadow-2xl overflow-hidden flex flex-col aspect-[9/18] transition-colors duration-300 relative"
+                      style={{ backgroundColor: previewPhoneBg }}
+                    >
+                      {/* Top Notch */}
+                      <div className="h-5 bg-black flex items-center justify-center">
+                        <div className="h-2.5 w-18 rounded-full bg-[#1b2230]" />
+                      </div>
 
                     {/* Conteúdo Renderizado da Bio */}
                     <div className="flex-1 overflow-y-auto no-scrollbar relative">
@@ -978,7 +1071,8 @@ export function ProfilesView({ state, selectedBotId, refresh }: ProfilesViewProp
                       </div>
                     </div>
                   </div>
-                );
+                </div>
+              );
               })()}
             </div>
           </div>

@@ -24,6 +24,15 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 160);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,17 +177,62 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
 
   return (
     <div
-      className="min-h-screen text-white selection:bg-[#d4f933] selection:text-black transition-colors duration-300"
+      className="relative min-h-screen text-white selection:bg-[#d4f933] selection:text-black transition-colors duration-300 overflow-x-hidden"
       style={{ backgroundColor: bgClass }}
     >
-      {/* Botão Flutuante de Compartilhar */}
+      {/* Backdrop Difuso com a Foto da Modelo desfocada no fundo da tela (Idêntico ao layout de referência) */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <img
+          src={profile.bannerUrl}
+          alt=""
+          className="h-full w-full object-cover scale-125 filter blur-3xl opacity-35"
+        />
+        <div className="absolute inset-0 bg-black/75" />
+      </div>
+
+      {/* Header Fixo no Topo ao Rolar a Página (Idêntico à Imagem de Referência) */}
+      <header
+        className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
+          isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3 pointer-events-none'
+        }`}
+      >
+        <div className="mx-auto flex h-12 max-w-[440px] items-center justify-between border-b border-white/10 bg-black/90 px-4 backdrop-blur-md shadow-lg">
+          <div className="flex items-center gap-2">
+            <img
+              src={profile.avatarUrl || profile.bannerUrl}
+              alt={profile.name}
+              className="h-6 w-6 rounded-full object-cover border border-white/20 shadow"
+            />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-white tracking-tight">{profile.name}</span>
+              {profile.verified && (
+                <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#3b82f6] text-white shadow-sm">
+                  <CheckCircle2 className="h-2.5 w-2.5 fill-current" />
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20 transition"
+            title="Compartilhar"
+          >
+            <Share2 className="h-3 w-3" />
+          </button>
+        </div>
+      </header>
+
+      {/* Botão Flutuante de Compartilhar no Topo Direito (quando não rolado) */}
       <button
         type="button"
         onClick={handleShare}
-        className="fixed right-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition hover:bg-black/70 active:scale-95"
+        className={`fixed right-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-md transition hover:bg-black/80 active:scale-95 ${
+          isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
         title="Compartilhar link"
       >
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-3.5 w-3.5" />
         {copiedLink && (
           <span className="absolute -bottom-8 right-0 rounded bg-white px-2 py-0.5 text-[10px] font-bold text-black shadow-lg">
             Copiado!
@@ -186,15 +240,14 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
         )}
       </button>
 
-      <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col">
-        {/* Banner de Topo com Foto da Modelo e Fade Degradê Escuro */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#0d1017]">
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col shadow-2xl relative bg-black/40 backdrop-blur-[2px]">
+        {/* Banner de Topo com Foto da Modelo e Fade Degradê Escuro Suave */}
+        <div className="relative aspect-[4/4.8] w-full overflow-hidden bg-[#0d1017]">
           <img
             src={profile.bannerUrl}
             alt={profile.name}
             className="h-full w-full object-cover object-center"
             onError={(e) => {
-              // fallback suave caso a imagem falhe
               (e.target as HTMLElement).style.display = 'none';
             }}
           />
@@ -225,7 +278,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
               )}
             </div>
 
-            <p className="mt-0.5 text-xs font-medium text-white/70 drop-shadow">
+            <p className="mt-0.5 text-xs font-normal text-white/60 drop-shadow">
               {profile.handle}
             </p>
 
@@ -236,13 +289,13 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
             )}
 
             {/* Ícones Sociais (Instagram, TikTok, Telegram, Twitter, WhatsApp) */}
-            <div className="mt-3.5 flex items-center justify-center gap-3">
+            <div className="mt-3.5 flex items-center justify-center gap-2.5">
               {profile.socialLinks?.instagram && (
                 <a
                   href={profile.socialLinks.instagram}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-md transition hover:scale-110 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-md transition hover:scale-110 active:scale-95"
                   title="Instagram"
                 >
                   <Instagram className="h-4 w-4" />
@@ -254,7 +307,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
                   href={profile.socialLinks.tiktok}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white border border-white/20 shadow-md transition hover:scale-110 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white border border-white/20 shadow-md transition hover:scale-110 active:scale-95"
                   title="TikTok"
                 >
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -268,7 +321,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
                   href={profile.socialLinks.telegram}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#24A1DE] text-white shadow-md transition hover:scale-110 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#24A1DE] text-white shadow-md transition hover:scale-110 active:scale-95"
                   title="Telegram Oficial"
                 >
                   <Send className="h-4 w-4" />
@@ -280,7 +333,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
                   href={profile.socialLinks.twitter}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white border border-white/20 shadow-md transition hover:scale-110 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white border border-white/20 shadow-md transition hover:scale-110 active:scale-95"
                   title="Twitter / X"
                 >
                   <Twitter className="h-4 w-4" />
@@ -292,7 +345,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
                   href={profile.socialLinks.whatsapp}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white shadow-md transition hover:scale-110 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white shadow-md transition hover:scale-110 active:scale-95"
                   title="WhatsApp"
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -300,9 +353,9 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
               )}
             </div>
 
-            {/* Contador de Prova Social / Seguidores */}
+            {/* Contador de Prova Social / Seguidores (Pill idêntico ao modelo) */}
             <div className="mt-3 flex items-center justify-center">
-              <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md shadow-sm">
+              <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3.5 py-1 text-xs font-medium text-white/90 backdrop-blur-md shadow-sm">
                 <span>{profile.followersCount} Total Followers</span>
                 <ChevronDown className="h-3 w-3 text-white/60" />
               </span>
@@ -310,10 +363,10 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
           </div>
         </div>
 
-        {/* NOTA IMPORTANTE: Conforme pedido do usuário, a caixa de input de e-mail / Subscribe foi 100% REMOVIDA */}
+        {/* NOTA: Conforme instrução do admin, o campo de captura de e-mail foi 100% removido */}
 
         {/* Lista de Cards de Botões com Foto de Fundo Provocante e Efeitos */}
-        <div className="flex-1 space-y-4 px-4 py-4">
+        <div className="flex-1 space-y-3.5 px-4 py-3">
           {profile.buttons
             .filter((btn) => btn.active)
             .sort((a, b) => a.order - b.order)
@@ -321,38 +374,38 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
               <div
                 key={button.id}
                 onClick={() => handleButtonClick(button)}
-                className="group relative cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-[#121620] shadow-xl transition-all duration-300 hover:scale-[1.015] hover:border-white/30 active:scale-[0.99]"
+                className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#121620] shadow-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/30 active:scale-[0.99]"
               >
                 {/* Foto Provocante de Fundo do Botão se existir */}
                 {button.imageUrl ? (
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40 sm:aspect-[16/9]">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40">
                     <img
                       src={button.imageUrl}
                       alt={button.title}
                       className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105"
                     />
                     {/* Degradê escuro sobre a foto para destacar o texto */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/20" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
 
                     {/* Ícone de Link no Topo Esquerdo */}
-                    <div className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-md shadow-md">
+                    <div className="absolute left-3.5 top-3.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-md shadow-md">
                       <LinkIcon className="h-4 w-4" />
                     </div>
 
                     {/* Badge Opcional no Topo Direito (ex: HOT, 30% OFF) */}
                     {button.badge && (
-                      <span className="absolute right-4 top-4 rounded-full border border-[#d4f933]/40 bg-[#d4f933] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black shadow-lg">
+                      <span className="absolute right-3.5 top-3.5 rounded-full border border-[#d4f933]/40 bg-[#d4f933] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-black shadow-lg">
                         {button.badge}
                       </span>
                     )}
 
-                    {/* Título e Subtítulo Sobrepostos na Base do Card */}
-                    <div className="absolute inset-x-0 bottom-0 p-4 text-center">
-                      <h2 className="text-base font-bold text-white drop-shadow-md sm:text-lg">
+                    {/* Título Sobreposto na Base do Card */}
+                    <div className="absolute inset-x-0 bottom-0 p-3 text-center">
+                      <h2 className="text-sm font-semibold text-white drop-shadow-md sm:text-base tracking-wide">
                         {button.title}
                       </h2>
                       {button.subtitle && (
-                        <p className="mt-0.5 text-xs text-white/80 drop-shadow">
+                        <p className="mt-0.5 text-[11px] text-white/80 drop-shadow">
                           {button.subtitle}
                         </p>
                       )}
@@ -360,9 +413,9 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
                   </div>
                 ) : (
                   // Card sem foto (botão estilo pill refinado)
-                  <div className="flex items-center justify-between p-4.5 bg-gradient-to-r from-[#151a24] to-[#121620] border border-white/5 p-4">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#151a24] to-[#121620] border border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-[#d4f933]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-[#d4f933]">
                         <LinkIcon className="h-4 w-4" />
                       </div>
                       <div>
@@ -395,7 +448,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
 
         {/* Rodapé Elegante idêntico ao modelo */}
         <footer className="mt-auto px-6 py-6 text-center">
-          <div className="flex items-center justify-center gap-3 text-xs text-[#6e7c90]">
+          <div className="flex items-center justify-center gap-3 text-xs text-white/50">
             <a href="#privacy" className="hover:text-white transition hover:underline">
               Privacy Policy
             </a>
@@ -408,7 +461,7 @@ export function PublicProfileView({ slug }: PublicProfileViewProps) {
               Report
             </a>
           </div>
-          <p className="mt-2 text-[10px] text-[#455060]">
+          <p className="mt-2 text-[10px] text-white/30">
             © {new Date().getFullYear()} {profile.name} · All rights reserved.
           </p>
         </footer>
